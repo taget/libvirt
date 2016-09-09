@@ -102,6 +102,7 @@ UTIL_SOURCES =							\
 		util/virbuffer.c util/virbuffer.h		\
 		util/virperf.c util/virperf.h			\
 		util/vircgroup.c util/vircgroup.h util/vircgrouppriv.h	\
+		util/virrscctrl.c util/virrscctrl.h \
 		util/virclosecallbacks.c util/virclosecallbacks.h		\
 		util/vircommand.c util/vircommand.h util/vircommandpriv.h \
 		util/virconf.c util/virconf.h			\

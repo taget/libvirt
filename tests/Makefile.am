@@ -171,6 +171,7 @@ test_programs = virshtest sockettest \
 	virauthconfigtest \
 	virbitmaptest \
 	vircgrouptest \
+	virrscctrltest \
 	vircryptotest \
 	virpcitest \
 	virendiantest \
@@ -1076,6 +1077,10 @@ virportallocatormock_la_LIBADD = $(MOCKLIBS_LIBS)
 vircgrouptest_SOURCES = \
 	vircgrouptest.c testutils.h testutils.c
 vircgrouptest_LDADD = $(LDADDS)
+
+virrscctrltest_SOURCES = \
+	virrscctrltest.c testutils.h testutils.c
+virrscctrltest_LDADD = $(LDADDS)
 
 vircgroupmock_la_SOURCES = \
 	vircgroupmock.c

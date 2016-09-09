@@ -2263,6 +2263,18 @@ virRandomGenerateWWN;
 virRandomInt;
 
 
+# util/virrscctrl.h
+VirRscctrlAddNewPartition;
+virRscctrlAvailable;
+virRscctrlGetMaxclosId;
+virRscctrlGetMaxL3Cbmlen;
+virRscctrlGetUnsignd;
+VirRscctrlRemovePartition;
+VirRscctrlGetSchemas;
+VirRscctrlAddtask;
+VirRscctrlGetTasks;
+VirRscctrlGetAllPartitions;
+
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;
 virRotatingFileReaderFree;
