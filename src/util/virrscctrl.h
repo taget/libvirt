@@ -21,11 +21,59 @@
  *  Eli Qiao <liyong.qiao@intel.com>
  */
 
-#ifndef __VIR_RSCCTRL_H__
-# define __VIR_RSCCTRL_H__
+#ifndef __VIR_RscCTRL_H__
+# define __VIR_RscCTRL_H__
 
 # include "virutil.h"
 # include "virbitmap.h"
+
+#define Rsc_DIR "/sys/fs/rscctrl"
+#define MAX_TASKS_FILE (10*1024*1024)
+
+typedef struct _VirRscPartition VirRscPartition;
+typedef VirRscPartition *VirRscPartitionPtr;
+
+/* A partition will contains name and a schema*/
+struct _VirRscPartition {
+    char *name;
+    VirRscSchemaPtr *schema;
+};
+
+typedef struct _VirRscSchema VirRscSchema;
+typedef VirRscSchema *VirRscSchemaPtr;
+
+struct _VirRscSchema {
+    char *name;
+    int type;
+    char *schema;
+};
+
+
+typedef _VirRscInfo VirRscInfo;
+struct _VirRscInfo{
+    int max_cbm_len;
+    int max_closid;
+};
+
+typedef _VirRscCtrlType VirRscCtrlType;
+struct _VirRscCtrlType {
+    int type;
+    VirRscInfo info;
+};
+
+typedef enum {
+    VIR_RscCTRL_L3, /*l3 cache*/
+    VIR_RscCTRL_LAST
+ } virRscCtrltype;
+
+typedef struct _VirRscCtrl VirRscCtrl;
+typedef VirRscCtrl *VirRscCtrlPtr;
+
+/* rscctrl struct*/
+struct _VirRscCtrl {
+    struct VirRscCtrlType resources[VIR_RscCTRL_LAST];
+    VirRscPartitionPtr partitions;
+};
 
 bool virRscctrlAvailable(void);
 

@@ -162,6 +162,18 @@ int main(void)
         ret = -6;
     }
 
+    VirRscCtrl vrc;
+    VirRscInfo vri;
+    VirRscCtrlType vrtype;
+    vri.max_cbm_len = virRscctrlGetMaxL3Cbmle() ;
+    vri.max_closid = virRscctrlGetMaxclosId();
+
+    vrtype.type = VIR_RscCTRL_L3;
+    vrtype.info = vri;
+    vrc.resources[VIR_RscCTRL_L3] = vrtype;
+
+    printf("iii %d\n", vrc.resources[VIR_RscCTRL_L3].type);
+
     if (ret < 0) {
         printf("failed\n");
     }
