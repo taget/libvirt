@@ -31,9 +31,9 @@
 # include "virlog.h"
 # include "virfile.h"
 # include "virbuffer.h"
-# include "testutilslxc.h"
 # include "virhostcpu.h"
 # include "virrscctrl.h"
+# include "nodeinfo.h"
 
 #endif
 
@@ -73,11 +73,12 @@ static int testvirRscctrlGetL3CbmLen(const void *args ATTRIBUTE_UNUSED)
 
 static int testVirRscctrlAddNewPartition(const void *args ATTRIBUTE_UNUSED)
 {
-    if(VirRscctrlAddNewPartition("p1", "L3:0=0ffff;1=fffff") < 0) {
+    if(VirRscctrlAddNewPartition("n0", "L3:0=0ffff;1=fffff") < 0) {
         return -1;
     }
 
-    return VirRscctrlRemovePartition("p1");
+    return 0;
+    //return VirRscctrlRemovePartition("n0");
 }
 
 
@@ -85,29 +86,30 @@ static int testVirRscctrlGetSchemas(const void *args ATTRIBUTE_UNUSED)
 {
     char *schemas;
 
-    if(VirRscctrlGetSchemas("p0", &schemas) < 0) {
+    if(VirRscctrlGetSchemas("n0", &schemas) < 0) {
         return -1;
     }
+
     printf("%s\n", schemas);
     VIR_FREE(schemas);
     return 0;
 }
 
-static int testVirRscctrlAddtask(const void *args ATTRIBUTE_UNUSED)
+static int testVirRscctrlAddTask(const void *args ATTRIBUTE_UNUSED) 
 {
     char *pids;
-    const char *p = "p0";
+//    const char *p = "p0";
 
 /*
-    if(VirRscctrlAddtask(p, "162102") < 0) {
+    if(VirRscctrlAddTask(p, "162102") < 0) {
         return -1;
     }
 */
-
-    if(VirRscctrlGetTasks(p, &pids) < 0) {
+    if(VirRscctrlGetTasks("n0", &pids) < 0) {
         return -1;
     }
-    printf("%s\n", pids);
+    printf("get tasks %s\n", pids);
+    printf("strlen %zu\n", strlen(pids));
     VIR_FREE(pids);
     return 0;
 }
@@ -115,12 +117,22 @@ static int testVirRscctrlAddtask(const void *args ATTRIBUTE_UNUSED)
 
 static int testVirRscctrlGetAllPartitions(const void *args ATTRIBUTE_UNUSED)
 {
-    char *partitions;
-    VirRscctrlGetAllPartitions(&partitions);
+    int len;
+    VirRscPartitionPtr p = NULL;
+    p = VirRscctrlGetAllPartitions(&len);
+    printf("get length is %d\n", len);
+    while(p) {
+        printf("p->name :%s\n", p->name);
+        printf("p->n_sockets :%d\n", p->n_sockets);
+        if(p->schemas) {
+           for(int i=0; i<p->n_sockets; i++) {
+                printf("schemas [ %d ] = %d\n", i, p->schemas[i].schema);
+           }
+        }
+        p = p->next;
+    }
     return 0;
 }
-
-
 
 int main(void)
 {
@@ -149,7 +161,7 @@ int main(void)
         ret = -4;
     }
 
-    if (virTestRun("Rscctrl add tasks", testVirRscctrlAddtask, NULL) < 0) {
+    if (virTestRun("Rscctrl get tasks", testVirRscctrlAddTask, NULL) < 0) {
 
         printf("-5\n");
         ret = -5;
@@ -161,18 +173,48 @@ int main(void)
         printf("-6\n");
         ret = -6;
     }
-
     VirRscCtrl vrc;
-    VirRscInfo vri;
-    VirRscCtrlType vrtype;
-    vri.max_cbm_len = virRscctrlGetMaxL3Cbmle() ;
-    vri.max_closid = virRscctrlGetMaxclosId();
+    VirInitRscctrl(&vrc);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].type);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.max_cbm_len);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.max_closid);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.n_sockets);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache);
 
-    vrtype.type = VIR_RscCTRL_L3;
-    vrtype.info = vri;
-    vrc.resources[VIR_RscCTRL_L3] = vrtype;
 
-    printf("iii %d\n", vrc.resources[VIR_RscCTRL_L3].type);
+    VirRefreshSchema(&vrc);
+
+    for(int i=0; i<2; i++) {
+        printf("non schema is %d\n",vrc.resources[VIR_RscCTRL_L3].info.non_shared_schemas[i].schema);
+        printf("shared schema is %d\n",vrc.resources[VIR_RscCTRL_L3].info.shared_schemas[i].schema);
+    }
+
+    printf("left non shared cache is %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache_non_shared_left);
+    printf("left shared cache is %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache_shared_left);
+
+    VirRscPartitionPtr p = NULL;
+    p = vrc.partitions;
+    printf("get partition length is %d\n", vrc.npartitions);
+    while(p) {
+        printf("p->name :%s\n", p->name);
+        printf("p->n_sockets :%d\n", p->n_sockets);
+        if(p->schemas) {
+           for(int j=0; j<p->n_sockets; j++) {
+                printf("schemas [ %d ] = %d\n", j, p->schemas[j].schema);
+           }
+        }
+        p = p->next;
+    }
+
+
+    VirFreeRscctrl(&vrc);
+    /* need to expose an interface of current cbm*/
+    /* need to get all l3 cache of host*/
+    /* need to get cpu sockets*/
+
+    /* refresh partitions if new qemu process start up/reboot/shutdown */
+
+    printf("15 has 1: %d", VirBit_Is_1(15));
 
     if (ret < 0) {
         printf("failed\n");

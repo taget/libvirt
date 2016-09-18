@@ -2273,7 +2273,12 @@ VirRscctrlRemovePartition;
 VirRscctrlGetSchemas;
 VirRscctrlAddtask;
 VirRscctrlGetTasks;
+VirParseSchema;
 VirRscctrlGetAllPartitions;
+VirBit_Is_1;
+VirInitRscctrl;
+VirRefreshSchema;
+VirFreeRscctrl;
 
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;

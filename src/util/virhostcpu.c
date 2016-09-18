@@ -699,7 +699,6 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
         VIR_FREE(sysfs_cpudir);
 
         *cpus += nodecpus;
-
         if (nodesockets > *sockets)
             *sockets = nodesockets;
 
