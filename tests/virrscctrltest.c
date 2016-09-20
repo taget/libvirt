@@ -95,7 +95,7 @@ static int testVirRscctrlGetSchemas(const void *args ATTRIBUTE_UNUSED)
     return 0;
 }
 
-static int testVirRscctrlAddTask(const void *args ATTRIBUTE_UNUSED) 
+static int testVirRscctrlAddTask(const void *args ATTRIBUTE_UNUSED)
 {
     char *pids;
 //    const char *p = "p0";
@@ -133,6 +133,102 @@ static int testVirRscctrlGetAllPartitions(const void *args ATTRIBUTE_UNUSED)
     }
     return 0;
 }
+
+/*static int write_new(bool shared, int * schemas, char* taskid)
+{
+    // this function try to create a partition with
+    // n-taskid for non shared partition
+    // s-taskid for shared partiton
+    return 0;
+}
+*/
+
+static int test_reserve_cache(VirRscCtrl *pvrc)
+{
+    // This is a test method
+    // first I want to have p
+    // This should be vm->pid
+    const char *taskid = "1234";
+    // We need this information when define a domain
+    bool shared = false;
+    // We need this information when define a domain
+    int cache_wanted = 1200;
+    // This should be compute by max_cbm_len * non_shared_ratio
+    int non_shared_bit = 10;
+
+    // maybe still need to provide cpu ping map if has
+    // example could be found:
+    // cpumap = vshMalloc(ctl, ncpus * cpumaplen);
+    // if ((ncpus = virDomainGetVcpuPinInfo(dom, ncpus, cpumap,
+    ////////
+    ////////////////////////
+
+    int bit_used = 0;
+
+    printf("system only allow [%d] bits for non shared cache\n", non_shared_bit);
+
+    printf("my id is [%s], I want to reserve [%d] KB cache for [%s]\n", taskid, cache_wanted, shared ? "shared" : "none shared");
+
+    if(pvrc->resources[VIR_RscCTRL_L3].info.l3_cache_shared_left < cache_wanted) {
+        printf("not enough cache left, only [%d] left", pvrc->resources[VIR_RscCTRL_L3].info.l3_cache_shared_left);
+        return -1;
+    }
+
+
+    // we will support cpu pin later..
+    if (1) {
+        bit_used = cache_wanted / pvrc->resources[VIR_RscCTRL_L3].info.l3_cache_per_bit;
+        if(cache_wanted % pvrc->resources[VIR_RscCTRL_L3].info.l3_cache_per_bit > 0 ||
+                bit_used == 0)
+            bit_used +=1;
+
+        int cpu_sockets = pvrc->resources[VIR_RscCTRL_L3].info.n_sockets;
+
+
+        if (bit_used % cpu_sockets != 0) {
+            printf("I need to increate a bit since I have %d sockets\n", cpu_sockets);
+            bit_used +=1;
+        }
+
+        printf("I need to use [%d] bit(s) in the schema\n", bit_used);
+
+        // sockets
+        int bit_used_per_socket = bit_used / cpu_sockets ;
+
+        // construct bit mask by 2 ^ bit_used -1
+        // bit_used of 1
+        // for ex: bit_use = 2
+        // bit_mask will be 11
+        int bit_mask = (1 << (bit_used_per_socket)) - 1;
+
+        // move these bit to high bit
+        // bit_mask will be
+        // 1100000000000000
+        bit_mask = bit_mask << (pvrc->resources[VIR_RscCTRL_L3].info.max_cbm_len - bit_used);
+
+        int schema[cpu_sockets];
+        VirRscSchemaPtr p = pvrc->resources[VIR_RscCTRL_L3].info.non_shared_schemas;
+
+        for(int i=0; i<cpu_sockets; i++) {
+            schema[i] = bit_mask;
+            while((p->schema & schema[i]) != 0) schema[i] = schema[i] >> 1;
+
+            // todo need to verify the schema is valid
+            if (schema[i] > (1 << (pvrc->resources[VIR_RscCTRL_L3].info.max_cbm_len - non_shared_bit)) -1)
+                printf("socket %d 's schema is %x\n", i, schema[i]);
+            else
+                printf("Error!!\n");
+            p ++;
+        }
+    }
+    else {
+        // in this case we need to rearrange schema for multiple sockets
+        ;
+    }
+    return 0;
+
+}
+
 
 int main(void)
 {
@@ -180,6 +276,7 @@ int main(void)
     printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.max_closid);
     printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.n_sockets);
     printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache);
+    printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache_per_bit);
 
 
     VirRefreshSchema(&vrc);
@@ -206,6 +303,7 @@ int main(void)
         p = p->next;
     }
 
+    test_reserve_cache(&vrc);
 
     VirFreeRscctrl(&vrc);
     /* need to expose an interface of current cbm*/

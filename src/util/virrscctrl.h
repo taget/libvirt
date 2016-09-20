@@ -39,7 +39,7 @@ typedef VirRscSchema *VirRscSchemaPtr;
 struct _VirRscSchema {
     char *name;
     unsigned int socket_no;
-    int schema; 
+    int schema;
 };
 
 typedef struct _VirRscPartition VirRscPartition;
