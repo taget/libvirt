@@ -16212,6 +16212,11 @@ virDomainDefParseXML(xmlDocPtr xml,
     if (virSecurityLabelDefsParseXML(def, ctxt, caps, flags) == -1)
         goto error;
 
+    /* TODO(eliqiao): extract domain cache from xml*/
+    /* would like to reserve 4096*/
+    def->l3cache.l3_cache_Occ = 4096;
+    def->l3cache.shared = 0;
+
     /* Extract domain memory */
     if (virDomainParseMemory("./memory[1]", NULL, ctxt,
                              &def->mem.total_memory, false, true) < 0)

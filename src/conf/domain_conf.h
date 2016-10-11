@@ -2070,6 +2070,15 @@ struct _virDomainBlkiotune {
     virBlkioDevicePtr devices;
 };
 
+typedef struct _virDomainL3Cachetune virDomainL3Cachetune;
+typedef virDomainL3Cachetune *virDomainL3CachetunePtr;
+
+struct _virDomainL3Cachetune {
+    unsigned long long l3_cache_Occ; /* l3 cache to be occupy */
+    int shared; /* l3 cache is shared or not */
+
+};
+
 typedef struct _virDomainMemtune virDomainMemtune;
 typedef virDomainMemtune *virDomainMemtunePtr;
 
@@ -2146,6 +2155,8 @@ struct _virDomainDef {
 
     virDomainBlkiotune blkio;
     virDomainMemtune mem;
+
+    virDomainL3Cachetune l3cache;
 
     virDomainVcpuDefPtr *vcpus;
     size_t maxvcpus;

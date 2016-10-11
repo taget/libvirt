@@ -1871,6 +1871,40 @@ virDomainSetMaxMemory(virDomainPtr domain, unsigned long memory)
     return -1;
 }
 
+/**
+* virDomainSetL3Cache:
+* @domain: a domain object or NULL
+* @cache: the cache size in kibibytes (blocks of 1024 bytes)
+* @shared: the cache is shared or not
+*
+* Set a domain's l3 cache usage in which of shared or not mode
+*
+* Returns 0 in case of success and -1 in case of failure.
+*/
+int
+virDomainSetL3Cache(virDomainPtr domain, unsigned long long cache, int shared)
+{
+    virConnectPtr conn;
+    VIR_DOMAIN_DEBUG(domain, "cache=%llu", cache);
+    VIR_DOMAIN_DEBUG(domain, "shared=%s", shared ? "yes" : "no");
+    virResetLastError();
+    virCheckDomainReturn(domain, -1);
+    conn = domain->conn;
+    virCheckReadOnlyGoto(conn->flags, error);
+    virCheckNonZeroArgGoto(cache, error);
+    if (conn->driver->domainSetL3Cache) {
+        int ret;
+        ret = conn->driver->domainSetL3Cache(domain, cache, shared);
+        if (ret < 0)
+            goto error;
+        return ret;
+    }
+    virReportUnsupportedError();
+error:
+    virDispatchError(domain->conn);
+    return -1;
+}
+
 
 /**
  * virDomainSetMemory:

@@ -162,6 +162,11 @@ typedef int
                          unsigned long memory);
 
 typedef int
+(*virDrvDomainSetL3Cache)(virDomainPtr domain,
+                          unsigned long long cache,
+                          int shared);
+
+typedef int
 (*virDrvDomainSetMemoryFlags)(virDomainPtr domain,
                               unsigned long memory,
                               unsigned int flags);
@@ -1301,6 +1306,7 @@ struct _virHypervisorDriver {
     virDrvDomainGetMaxMemory domainGetMaxMemory;
     virDrvDomainSetMaxMemory domainSetMaxMemory;
     virDrvDomainSetMemory domainSetMemory;
+    virDrvDomainSetL3Cache domainSetL3Cache;
     virDrvDomainSetMemoryFlags domainSetMemoryFlags;
     virDrvDomainSetMemoryStatsPeriod domainSetMemoryStatsPeriod;
     virDrvDomainSetMemoryParameters domainSetMemoryParameters;

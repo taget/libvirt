@@ -278,6 +278,8 @@ struct _virDomainInfo {
     unsigned long memory;       /* the memory in KBytes used by the domain */
     unsigned short nrVirtCpu;   /* the number of virtual CPUs for the domain */
     unsigned long long cpuTime; /* the CPU time used in nanoseconds */
+    unsigned long long l3cacheOcc; /* the l3 cache occupancy in Bytes */
+    int l3cache_shared; /* if l3cache occupancy shared or not */
 };
 
 /**
@@ -1365,6 +1367,9 @@ int                     virDomainSetMaxMemory   (virDomainPtr domain,
                                                  unsigned long memory);
 int                     virDomainSetMemory      (virDomainPtr domain,
                                                  unsigned long memory);
+int                     virDomainSetL3Cache     (virDomainPtr domain,
+                                                 unsigned long long cache,
+                                                 int shared);
 int                     virDomainSetMemoryFlags (virDomainPtr domain,
                                                  unsigned long memory,
                                                  unsigned int flags);

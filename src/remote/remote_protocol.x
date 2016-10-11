@@ -489,6 +489,7 @@ struct remote_node_get_info_ret { /* insert@1 */
     int sockets;
     int cores;
     int threads;
+    int l3_cache;
 };
 
 struct remote_connect_get_capabilities_ret {
@@ -602,6 +603,12 @@ struct remote_domain_set_memory_parameters_args {
     remote_nonnull_domain dom;
     remote_typed_param params<REMOTE_DOMAIN_MEMORY_PARAMETERS_MAX>;
     unsigned int flags;
+};
+
+struct remote_domain_set_l3_cache_args {
+    remote_nonnull_domain dom;
+    unsigned hyper cache;
+    int shared;
 };
 
 struct remote_domain_get_memory_parameters_args {
@@ -909,6 +916,7 @@ struct remote_domain_get_info_ret { /* insert@1 */
     unsigned hyper memory;
     unsigned short nrVirtCpu;
     unsigned hyper cpuTime;
+    unsigned hyper l3cacheOcc;
 };
 
 struct remote_domain_save_args {
@@ -5934,5 +5942,11 @@ enum remote_procedure {
      * @generate: both
      * @acl: none
      */
-    REMOTE_PROC_NODE_DEVICE_EVENT_UPDATE = 377
+    REMOTE_PROC_NODE_DEVICE_EVENT_UPDATE = 377,
+
+    /**
+      * @generate: both
+      * @acl: none
+    */
+    REMOTE_PROC_DOMAIN_SET_L3_CACHE = 378
 };

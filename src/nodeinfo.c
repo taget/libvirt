@@ -155,6 +155,9 @@ nodeGetInfo(virNodeInfoPtr nodeinfo)
                           &nodeinfo->cores, &nodeinfo->threads) < 0)
         return -1;
 
+    // TODO(eliqiao): get host's l3_cache size
+    nodeinfo->l3_cache = 56320;
+    // eliqiao
     return 0;
 }
 

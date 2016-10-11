@@ -7976,6 +7976,7 @@ static virHypervisorDriver hypervisor_driver = {
     .domainSetMaxMemory = remoteDomainSetMaxMemory, /* 0.3.0 */
     .domainSetMemory = remoteDomainSetMemory, /* 0.3.0 */
     .domainSetMemoryFlags = remoteDomainSetMemoryFlags, /* 0.9.0 */
+    .domainSetL3Cache = remoteDomainSetL3Cache, /* 2.2.0 */
     .domainSetMemoryStatsPeriod = remoteDomainSetMemoryStatsPeriod, /* 1.1.1 */
     .domainSetMemoryParameters = remoteDomainSetMemoryParameters, /* 0.8.5 */
     .domainGetMemoryParameters = remoteDomainGetMemoryParameters, /* 0.8.5 */

@@ -144,9 +144,15 @@ struct remote_node_get_info_ret {
         int                        sockets;
         int                        cores;
         int                        threads;
+        int                        l3_cache;
 };
 struct remote_connect_get_capabilities_ret {
         remote_nonnull_string      capabilities;
+};
+struct remote_domain_set_l3_cache_args {
+        remote_nonnull_domain   dom;
+        uint64_t                cache;
+        int                     shared;
 };
 struct remote_connect_get_domain_capabilities_args {
         remote_string              emulatorbin;
@@ -549,6 +555,8 @@ struct remote_domain_get_info_ret {
         uint64_t                   memory;
         u_short                    nrVirtCpu;
         uint64_t                   cpuTime;
+        uint64_t                   l3cacheOcc;
+        int                        l3cache_shared;
 };
 struct remote_domain_save_args {
         remote_nonnull_domain      dom;

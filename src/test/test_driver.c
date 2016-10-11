@@ -138,6 +138,7 @@ static const virNodeInfo defaultNodeInfo = {
     2,
     2,
     2,
+    35840,
 };
 
 static void

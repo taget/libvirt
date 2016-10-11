@@ -2275,6 +2275,19 @@ static char *qemuDomainGetOSType(virDomainPtr dom) {
     return type;
 }
 
+static int qemuDomainSetL3Cache(virDomainPtr dom, unsigned long long cache, int shared)
+{
+    // TODO(eliqiao):
+    virQEMUDriverPtr driver = dom->conn->privateData;
+    VIR_WARN("qemuDomainSetL3Cache cache=%llu", cache);
+    VIR_WARN("qemuDomainSetL3Cache shared=%d", shared);
+    if (!driver) {
+        return -1;
+    }
+
+    return 0;
+}
+
 /* Returns max memory in kb, 0 if error */
 static unsigned long long
 qemuDomainGetMaxMemory(virDomainPtr dom)
@@ -20212,6 +20225,7 @@ static virHypervisorDriver qemuHypervisorDriver = {
     .domainDestroy = qemuDomainDestroy, /* 0.2.0 */
     .domainDestroyFlags = qemuDomainDestroyFlags, /* 0.9.4 */
     .domainGetOSType = qemuDomainGetOSType, /* 0.2.2 */
+    .domainSetL3Cache = qemuDomainSetL3Cache, /* 2.2.0 */
     .domainGetMaxMemory = qemuDomainGetMaxMemory, /* 0.4.2 */
     .domainSetMaxMemory = qemuDomainSetMaxMemory, /* 0.4.2 */
     .domainSetMemory = qemuDomainSetMemory, /* 0.4.2 */
