@@ -279,7 +279,7 @@ int main(void)
     printf(" %d\n", vrc.resources[VIR_RscCTRL_L3].info.l3_cache_per_bit);
 
 
-    VirRefreshSchema(&vrc);
+    VirInitSchema(&vrc);
 
     for(int i=0; i<2; i++) {
         printf("non schema is %d\n",vrc.resources[VIR_RscCTRL_L3].info.non_shared_schemas[i].schema);

@@ -2277,8 +2277,13 @@ VirParseSchema;
 VirRscctrlGetAllPartitions;
 VirBit_Is_1;
 VirInitRscctrl;
-VirRefreshSchema;
+VirInitSchema;
 VirFreeRscctrl;
+VirSetL3Cache;
+VirRscCtrlSetUnsharedCache;
+VirRscCtrlSetSharedCache;
+VirWriteSchema;
+VirRscCtrlCalCache;
 
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;

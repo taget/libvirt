@@ -109,6 +109,14 @@ VirRscPartitionPtr VirRscctrlGetAllPartitions(int *);
 int VirBit_Is_1(int);
 
 int VirInitRscctrl(VirRscCtrl *);
-int VirRefreshSchema(VirRscCtrl *);
+int VirInitSchema(VirRscCtrl *);
 int VirFreeRscctrl(VirRscCtrlPtr);
+
+int VirSetL3Cache(unsigned long long, unsigned long long, int);
+
+int VirRscCtrlSetUnsharedCache(VirRscCtrlPtr, unsigned long long, unsigned long long);
+int VirRscCtrlSetSharedCache(VirRscCtrlPtr, unsigned long long, unsigned long long);
+int VirWriteSchema(VirRscCtrlPtr, unsigned long long, int*, int);
+int VirRscCtrlCalCache(VirRscPartitionPtr, int);
+
 #endif

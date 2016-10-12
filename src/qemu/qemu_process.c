@@ -75,6 +75,7 @@
 #include "configmake.h"
 #include "nwfilter_conf.h"
 #include "netdev_bandwidth_conf.h"
+#include "virrscctrl.h"
 
 #define VIR_FROM_THIS VIR_FROM_QEMU
 
@@ -5627,6 +5628,16 @@ qemuProcessLaunch(virConnectPtr conn,
     if (flags & VIR_QEMU_PROCESS_START_AUTODESTROY &&
         qemuProcessAutoDestroyAdd(driver, vm, conn) < 0)
         goto cleanup;
+
+    /* TODO(eliqiao)
+     */
+    VIR_WARN("occupy l3 cache for domain !!");
+    VIR_WARN("l3_cache_Occ = %llu", vm->def->l3cache.l3_cache_Occ);
+    VIR_WARN("shared = %d", vm->def->l3cache.shared);
+
+    if (VirSetL3Cache(vm->pid, vm->def->l3cache.l3_cache_Occ, vm->def->l3cache.shared) < 0)
+        goto cleanup;
+
 
     ret = 0;
 

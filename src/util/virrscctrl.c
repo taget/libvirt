@@ -203,7 +203,7 @@ VirRscSchemaPtr VirParseSchema(const char* schema, int *ncount)
 
     unsigned int socket_no = 0;
     p = q = schema;
-    pos = strchr(schema, ':') - p; 
+    pos = strchr(schema, ':') - p;
 
     if(virStrncpy(type, schema, pos, strlen(schema)) == NULL) {
         return NULL;
@@ -273,7 +273,7 @@ VirRscPartitionPtr VirRscctrlGetAllPartitions(int *len)
     char *schemas;
     char *tasks = NULL;
     *len = 0;
-    VirRscPartition *header, *tmp, *tmp_pre; 
+    VirRscPartition *header, *tmp, *tmp_pre;
     header = tmp = tmp_pre = NULL;
     if (virDirOpenQuiet(&dp, RSC_DIR) < 0) {
          if (errno == ENOENT)
@@ -289,11 +289,14 @@ VirRscPartitionPtr VirRscctrlGetAllPartitions(int *len)
     *len = 1;
     header->pre = NULL;
     header->next = NULL;
+
     if(VIR_STRDUP(header->name, "default") < 0)
         goto cleanup;
+
     if (VirRscctrlGetSchemas(NULL, &schemas) < 0) {
         goto cleanup;
     }
+
     header->schemas = VirParseSchema(schemas, &(header->n_sockets));
     *len = 1;
 
@@ -310,6 +313,7 @@ VirRscPartitionPtr VirRscctrlGetAllPartitions(int *len)
         if(strlen(tasks) == 0) {
             VirRscctrlRemovePartition(ent->d_name);
             VIR_FREE(tasks);
+            continue;
         }
 
         if(VIR_ALLOC(tmp) < 0)
@@ -331,7 +335,7 @@ VirRscPartitionPtr VirRscctrlGetAllPartitions(int *len)
             goto cleanup;
 
         tmp_pre = tmp;
-       
+
         if (VirRscctrlGetSchemas(tmp->name, &schemas) < 0) {
             goto cleanup;
         }
@@ -441,7 +445,7 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
         goto cleanup;
     if(VIR_ALLOC(pvrtype) < 0)
         goto cleanup;
- 
+
     if (virRscctrlGetMaxL3Cbmlen(&max_l3_cbm_len) < 0)
         goto cleanup;
     pvri->max_cbm_len = max_l3_cbm_len;
@@ -460,6 +464,7 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
     pvri->l3_cache = 56320;
     pvri->l3_cache_non_shared_left = 56320 / 2;
     pvri->l3_cache_shared_left = 56320;
+    // 1048K
     pvri->l3_cache_per_bit = 56320 / pvri->n_sockets / pvri->max_cbm_len;
     pvri->shared_schemas = NULL;
     pvri->non_shared_bit = pvri->max_cbm_len / 2;
@@ -480,14 +485,14 @@ cleanup:
 }
 
 /*Refresh schemas for partitions*/
-int VirRefreshSchema(VirRscCtrl *pvrsc)
+int VirInitSchema(VirRscCtrl *pvrsc)
 {
     VirRscInfo *pvri = NULL;
     VirRscSchemaPtr pschema = NULL;
     VirRscSchemaPtr pschema_shared = NULL;
-    
+
     pvri = &(pvrsc->resources[VIR_RscCTRL_L3].info);
-   
+
     if(VIR_ALLOC_N_QUIET(pschema, pvri->n_sockets) < 0)
         return -1;
 
@@ -511,18 +516,20 @@ int VirRefreshSchema(VirRscCtrl *pvrsc)
         }
         p = p->next;
     }
-    pvri->non_shared_schemas = pschema; 
-    pvri->shared_schemas = pschema_shared; 
+    pvri->non_shared_schemas = pschema;
+    pvri->shared_schemas = pschema_shared;
 
-   // pvri->l3_cache_non_shared_left = 
+   // pvri->l3_cache_non_shared_left =
     int used = 0;
     for(int i=0; i<pvri->n_sockets; i++) {
         used += (VirBit_Is_1(pschema[i].schema) * pvri->l3_cache_per_bit);
     }
 
-    pvri->l3_cache_non_shared_left -= used; 
-    pvri->l3_cache_shared_left = pvri->l3_cache - pvri->l3_cache_non_shared_left; 
-    return 0; 
+    pvri->l3_cache_non_shared_left -= used;
+    pvri->l3_cache_shared_left = pvri->l3_cache - pvri->l3_cache_non_shared_left;
+
+    // refresh default schema
+    return 0;
 }
 
 // free allocated memory for partitions
@@ -540,11 +547,192 @@ int VirFreeRscctrl(VirRscCtrlPtr prsc)
         p = p->next;
         VIR_FREE(pre);
     }
-    
+
     for(int i=0; i<VIR_RscCTRL_LAST; i++) {
         VIR_FREE(prsc->resources[i].info.shared_schemas);
         VIR_FREE(prsc->resources[i].info.non_shared_schemas);
     }
-    return 0; 
+    return 0;
 }
 
+int VirSetL3Cache(unsigned long long pid, unsigned long long cache, int shared)
+{
+    /*
+     * TODO(eliqiao): make this as a global variable then only Do refresh
+     * when we need to invoke it.
+     */
+
+    /*
+     * TODO(eliqiao): need to consider shared and non-shared mode
+     * */
+    VirRscCtrl vrc;
+    VirInitRscctrl(&vrc);
+    VirInitSchema(&vrc);
+    if(0 == shared)
+        return VirRscCtrlSetUnsharedCache(&vrc, pid, cache);
+    else
+        return VirRscCtrlSetSharedCache(&vrc, pid, cache);
+}
+
+int VirRscCtrlSetUnsharedCache(VirRscCtrlPtr pRsc, unsigned long long pid, unsigned long long cache)
+{
+    int bit_used;
+    int non_shared_bit = 10;
+
+    VIR_WARN("Aabout to set cbm for taskid = %llu", pid);
+    VIR_WARN("cache = %llu.", cache);
+
+    if(pRsc->resources[VIR_RscCTRL_L3].info.l3_cache_shared_left < cache) {
+        VIR_WARN("not enough cache left");
+        return -1;
+    }
+
+    bit_used = cache / pRsc->resources[VIR_RscCTRL_L3].info.l3_cache_per_bit;
+    if(cache % pRsc->resources[VIR_RscCTRL_L3].info.l3_cache_per_bit > 0 || bit_used == 0)
+        bit_used += 1;
+
+    int cpu_sockets = pRsc->resources[VIR_RscCTRL_L3].info.n_sockets;
+    if (bit_used % cpu_sockets != 0) {
+        VIR_WARN("increace 1 bit");
+        bit_used += 1;
+    }
+
+    VIR_WARN("I need to use [%d] bit(s) in the schema", bit_used);
+
+    // sockets
+    int bit_used_per_socket = bit_used / cpu_sockets ;
+
+    // construct bit mask by 2 ^ bit_used -1
+    // bit_used of 1
+    // for ex: bit_use = 2
+    // bit_mask will be 11
+    int bit_mask = (1 << (bit_used_per_socket)) - 1;
+
+    // move these bit to high bit
+    // bit_mask will be
+    // 1100000000000000
+    bit_mask = bit_mask << (pRsc->resources[VIR_RscCTRL_L3].info.max_cbm_len - bit_used + 1);
+
+    int schema[cpu_sockets];
+    VirRscSchemaPtr p = pRsc->resources[VIR_RscCTRL_L3].info.non_shared_schemas;
+
+    for(int i=0; i<cpu_sockets; i++) {
+        schema[i] = bit_mask;
+         while((p->schema & schema[i]) != 0) schema[i] = schema[i] >> 1;
+         // todo need to verify the schema is valid
+        if (schema[i] > (1 << (pRsc->resources[VIR_RscCTRL_L3].info.max_cbm_len - non_shared_bit)) -1)
+            VIR_WARN("socket %d 's schema is %x", i, schema[i]);
+        else {
+            /*
+             * TODO(eliqiao):
+             * */
+            printf("Error!!\n");
+        }
+
+        /* update non_shared_schemas then later we will use this to
+         * update default schema */
+        p->schema = p->schema | schema[i];
+        p ++;
+    }
+
+    return VirWriteSchema(pRsc, pid, schema, cpu_sockets);
+}
+
+int VirRscCtrlSetSharedCache(VirRscCtrlPtr pRsc, unsigned long long pid, unsigned long long cache)
+{
+    VIR_WARN("p=%p, pid=%llu, cache=%llu",pRsc, pid, cache);
+
+    if(pRsc->resources[VIR_RscCTRL_L3].info.l3_cache_shared_left < cache) {
+        VIR_WARN("not enough cache left");
+        return -1;
+    }
+    /*
+     * Loop for each shared schema and find a most fit one
+     * */
+/*
+    VirRscSchemaPtr p = pRsc->resources[VIR_RscCTRL_L3].info.shared_schemas;
+
+    for(int i = 0; i < pRsc->resources[VIR_RscCTRL_L3].info.n_sockets; i++) {
+        VIR_WARN("p[i]=%p", &p[i]);
+    }
+*/
+    VirRscPartitionPtr pp = pRsc->partitions;
+    /* don't check default partition */
+    for(int i = 1; i < pRsc->npartitions; i++) {
+        /* Only care about shared partiton*/
+        if(pp->name[0] == 'n')
+            continue;
+    }
+    return 0;
+}
+/*
+ * VirWriteSchema to write schema
+ */
+int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid, int* schema, int cpu_socket)
+{
+    int ret = -1;
+    char* partition_name = NULL;
+    char* schema_str = NULL;
+    char* pid_str = NULL;
+    char* schema_path = NULL;
+    int default_schema = (1 << p->resources[VIR_RscCTRL_L3].info.max_cbm_len) - 1;
+    if(asprintf(&partition_name, "n-%llu", pid) < 0)
+        goto cleanup;
+
+    for(int i = 0; i < cpu_socket; i ++) {
+        ;
+    // FIXME(eliqiao): loop schema
+    }
+    // FIXME(eliqiao): loop schema
+    if(asprintf(&schema_str, "L3:0=%x;1=%x", schema[0], schema[1]) <0)
+        goto cleanup;
+
+    if(VirRscctrlAddNewPartition(partition_name, schema_str) < 0) {
+        VIR_WARN("Failed to create new partition");
+        goto cleanup;
+    }
+
+    if(asprintf(&pid_str, "%llu", pid) < 0)
+        goto cleanup;
+
+    if(VirRscctrlAddTask(partition_name, pid_str) < 0) {
+        VIR_WARN("Failed to add %s to partition %s", pid_str, partition_name);
+    }
+
+    VIR_FREE(schema_str);
+    schema_str = NULL;
+
+    /* update default partition */
+    // FIXME(eliqiao): loop schema
+    if(asprintf(&schema_str, "L3:0=%x;1=%x", default_schema - p->resources[VIR_RscCTRL_L3].info.non_shared_schemas[0].schema, default_schema - p->resources[VIR_RscCTRL_L3].info.non_shared_schemas[1].schema) < 0)
+        goto cleanup;
+    VIR_WARN("default schema is %s ", schema_str);
+    if(asprintf(&schema_path, "%s/schemas", RSC_DIR) < 0)
+        goto cleanup;
+
+    VIR_WARN("default schema path is %s ", schema_path);
+    if (virFileWriteStr(schema_path, schema_str, 0644) < 0) {
+        goto cleanup;
+    }
+    VIR_WARN("default schema path is %s ", schema_path);
+    VIR_WARN("default schema  is %s ", schema_str);
+
+    ret = 0;
+
+cleanup:
+    VIR_FREE(partition_name);
+    VIR_FREE(schema_str);
+    VIR_FREE(pid_str);
+    VIR_FREE(schema_path);
+    return ret;
+}
+
+int VirRscCtrlCalCache(VirRscPartitionPtr p, int l3_cache_per_bit)
+{
+    int i;
+    int cache_sum = 0;
+    for(i = 0; i < p->n_sockets; i++ ){
+        cache_sum += l3_cache_per_bit * VirBit_Is_1(p->schemas[i].schema);
+    }
+    return cache_sum;
+}
