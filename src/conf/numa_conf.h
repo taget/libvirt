@@ -96,6 +96,9 @@ virNumaMemAccess virDomainNumaGetNodeMemoryAccessMode(virDomainNumaPtr numa,
 unsigned long long virDomainNumaGetNodeMemorySize(virDomainNumaPtr numa,
                                                   size_t node)
     ATTRIBUTE_NONNULL(1);
+unsigned long long virDomainNumaGetNodeL3CacheSize(virDomainNumaPtr numa,
+                                                   size_t node)
+    ATTRIBUTE_NONNULL(1);
 unsigned long long virDomainNumaGetMemorySize(virDomainNumaPtr numa)
     ATTRIBUTE_NONNULL(1);
 

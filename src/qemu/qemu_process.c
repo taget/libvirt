@@ -2413,8 +2413,19 @@ qemuProcessSetupPid(virDomainObjPtr vm,
 
 
 static int
-qemuProcessSetupEmulator(virDomainObjPtr vm)
+qemuProcessSetupEmulator(virDomainObjPtr vm, virCapsPtr caps)
 {
+    /* TODO(eliqiao) define a new method to set cat
+     * such as :
+     * if host support cat and domain has numa setting
+     */
+    VIR_WARN("occupy l3 cache for domain !!");
+    VIR_WARN("l3_cache_Occ = %llu", vm->def->l3cache.l3_cache_Occ);
+    VIR_WARN("shared = %d", vm->def->l3cache.shared);
+
+    if (VirRscCtrlSetL3Cache(vm->pid, vm->def, caps) < 0)
+        return -1;
+
     return qemuProcessSetupPid(vm, vm->pid, VIR_CGROUP_THREAD_EMULATOR,
                                0, vm->def->cputune.emulatorpin,
                                vm->def->cputune.emulator_period,
@@ -5482,7 +5493,7 @@ qemuProcessLaunch(virConnectPtr conn,
         goto cleanup;
 
     VIR_DEBUG("Setting emulator tuning/settings");
-    if (qemuProcessSetupEmulator(vm) < 0)
+    if (qemuProcessSetupEmulator(vm, caps) < 0)
         goto cleanup;
 
     VIR_DEBUG("Setting domain security labels");
@@ -5628,16 +5639,6 @@ qemuProcessLaunch(virConnectPtr conn,
     if (flags & VIR_QEMU_PROCESS_START_AUTODESTROY &&
         qemuProcessAutoDestroyAdd(driver, vm, conn) < 0)
         goto cleanup;
-
-    /* TODO(eliqiao)
-     */
-    VIR_WARN("occupy l3 cache for domain !!");
-    VIR_WARN("l3_cache_Occ = %llu", vm->def->l3cache.l3_cache_Occ);
-    VIR_WARN("shared = %d", vm->def->l3cache.shared);
-
-    if (VirSetL3Cache(vm->pid, vm->def->l3cache.l3_cache_Occ, vm->def->l3cache.shared) < 0)
-        goto cleanup;
-
 
     ret = 0;
 
@@ -6203,6 +6204,7 @@ void qemuProcessStop(virQEMUDriverPtr driver,
         VIR_FREE(xml);
     }
 
+    VirRscctrlRefresh();
     virDomainObjRemoveTransientDef(vm);
 
  endjob:

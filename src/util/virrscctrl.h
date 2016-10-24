@@ -26,6 +26,7 @@
 
 # include "virutil.h"
 # include "virbitmap.h"
+# include "domain_conf.h"
 
 #define RSC_DIR "/sys/fs/rscctrl"
 #define MAX_TASKS_FILE (10*1024*1024)
@@ -67,6 +68,7 @@ struct _VirRscInfo{
     int n_sockets; /*indicate of how many schemas left*/
     VirRscSchemaPtr shared_schemas; /*schemas of currently host by OR of all schemas*/
     VirRscSchemaPtr non_shared_schemas; /*schemas of currently host by OR of all schemas*/
+    VirRscSchemaPtr default_schemas; /*schemas of currently host by OR of all schemas*/
     unsigned int non_shared_bit; /* how many bit are use for non_shared cache*/
 };
 
@@ -106,7 +108,6 @@ int VirRscctrlGetTasks(const char *, char **);
 
 VirRscSchemaPtr VirParseSchema(const char* , int *);
 VirRscPartitionPtr VirRscctrlGetAllPartitions(int *);
-int VirBit_Is_1(int);
 
 int VirInitRscctrl(VirRscCtrl *);
 int VirInitSchema(VirRscCtrl *);
@@ -116,7 +117,7 @@ int VirSetL3Cache(unsigned long long, unsigned long long, int);
 
 int VirRscCtrlSetUnsharedCache(VirRscCtrlPtr, unsigned long long, unsigned long long);
 int VirRscCtrlSetSharedCache(VirRscCtrlPtr, unsigned long long, unsigned long long);
-int VirWriteSchema(VirRscCtrlPtr, unsigned long long, int*, int);
-int VirRscCtrlCalCache(VirRscPartitionPtr, int);
-
+//
+int VirRscCtrlSetL3Cache(unsigned long long, virDomainDefPtr, virCapsPtr);
+int VirRscctrlRefresh(void);
 #endif

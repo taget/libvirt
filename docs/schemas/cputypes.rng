@@ -107,6 +107,11 @@
         <ref name="memoryKB"/>
       </attribute>
       <optional>
+      <attribute name="l3cache">
+        <ref name="memoryKB"/>
+      </attribute>
+      </optional>
+      <optional>
         <attribute name="unit">
           <ref name="unit"/>
         </attribute>

@@ -722,6 +722,7 @@ virDomainNumaGetNodeCount;
 virDomainNumaGetNodeCpumask;
 virDomainNumaGetNodeMemoryAccessMode;
 virDomainNumaGetNodeMemorySize;
+virDomainNumaGetNodeL3CacheSize;
 virDomainNumaNew;
 virDomainNumaSetNodeMemorySize;
 virDomainNumatuneFormatNodeset;
@@ -2275,15 +2276,15 @@ VirRscctrlAddtask;
 VirRscctrlGetTasks;
 VirParseSchema;
 VirRscctrlGetAllPartitions;
-VirBit_Is_1;
 VirInitRscctrl;
 VirInitSchema;
 VirFreeRscctrl;
 VirSetL3Cache;
 VirRscCtrlSetUnsharedCache;
 VirRscCtrlSetSharedCache;
-VirWriteSchema;
-VirRscCtrlCalCache;
+VirRscCtrlSetL3Cache;
+VirRscctrlRefresh;
+
 
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;

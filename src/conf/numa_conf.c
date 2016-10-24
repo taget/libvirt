@@ -65,6 +65,7 @@ struct _virDomainNuma {
         virBitmapPtr nodeset;   /* host memory nodes where this guest node resides */
         virDomainNumatuneMemMode mode;  /* memory mode selection */
         virNumaMemAccess memAccess; /* shared memory access configuration */
+        unsigned long long l3_cache; /* l3 cache size in KiB */
     } *mem_nodes;           /* guest node configuration */
     size_t nmem_nodes;
 
@@ -776,6 +777,10 @@ virDomainNumaDefCPUParseXML(virDomainNumaPtr def,
                                  &def->mem_nodes[cur_cell].mem, true, false) < 0)
             goto cleanup;
 
+        if (virDomainParseMemory("./@l3cache", "./@unit", ctxt,
+                                 &def->mem_nodes[cur_cell].l3_cache, true, false) < 0)
+            goto cleanup;
+
         if ((tmp = virXMLPropString(nodes[i], "memAccess"))) {
             if ((rc = virNumaMemAccessTypeFromString(tmp)) <= 0) {
                 virReportError(VIR_ERR_CONFIG_UNSUPPORTED,
@@ -824,6 +829,8 @@ virDomainNumaDefCPUFormat(virBufferPtr buf,
         virBufferAsprintf(buf, " cpus='%s'", cpustr);
         virBufferAsprintf(buf, " memory='%llu'",
                           virDomainNumaGetNodeMemorySize(def, i));
+        virBufferAsprintf(buf, " l3cache='%llu'",
+                          virDomainNumaGetNodeL3CacheSize(def, i));
         virBufferAddLit(buf, " unit='KiB'");
         if (memAccess)
             virBufferAsprintf(buf, " memAccess='%s'",
@@ -960,6 +967,12 @@ virDomainNumaSetNodeMemorySize(virDomainNumaPtr numa,
     numa->mem_nodes[node].mem = size;
 }
 
+unsigned long long
+virDomainNumaGetNodeL3CacheSize(virDomainNumaPtr numa,
+                                size_t node)
+{
+    return numa->mem_nodes[node].l3_cache;
+}
 
 unsigned long long
 virDomainNumaGetMemorySize(virDomainNumaPtr numa)
