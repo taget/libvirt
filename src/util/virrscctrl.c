@@ -545,11 +545,11 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
     pvri->n_sockets = nodeinfo.nodes;
     // pvri->n_sockets = 2; // on 2699, it has 2 sockets
     // L3 cache:              56320K
-    pvri->l3_cache = 56320;
-    pvri->l3_cache_non_shared_left = 56320 / 2;
-    pvri->l3_cache_shared_left = 56320;
+    pvri->l3_cache = nodeinfo.l3_cache;
+    pvri->l3_cache_non_shared_left = nodeinfo.l3_cache / 2;
+    pvri->l3_cache_shared_left =nodeinfo.l3_cache ;
     // 1048K
-    pvri->l3_cache_per_bit = 56320 / pvri->n_sockets / pvri->max_cbm_len;
+    pvri->l3_cache_per_bit = nodeinfo.l3_cache / pvri->n_sockets / pvri->max_cbm_len;
     pvri->shared_schemas = NULL;
     pvri->non_shared_bit = pvri->max_cbm_len / 2;
     pvri->non_shared_schemas = NULL;
