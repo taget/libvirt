@@ -28,12 +28,6 @@
 # include "virbitmap.h"
 # include "domain_conf.h"
 
-#define RSC_DIR "/sys/fs/rscctrl"
-#define MAX_TASKS_FILE (10*1024*1024)
-#define MAX_SCHEMA_LEN 1024
-#define MAX_CBM_BIT_LEN 64
-
-
 typedef struct _VirRscSchema VirRscSchema;
 typedef VirRscSchema *VirRscSchemaPtr;
 
@@ -61,15 +55,17 @@ typedef struct _VirRscInfo VirRscInfo;
 struct _VirRscInfo{
     unsigned int max_cbm_len;
     unsigned int max_closid;
-    unsigned l3_cache; /*l3 cache of a host,in KB*/
-    unsigned l3_cache_non_shared_left; /*l3 cache left of a host*/
-    unsigned l3_cache_shared_left; /*be default it shoulbe equal to l3_cache*/
-    unsigned l3_cache_per_bit; /*l3_cache/ max_cbm_len / n_socket*/
+    unsigned int l3_cache; /*l3 cache of a host,in KB*/
+    unsigned int l3_cache_non_shared_left; /*l3 cache left of a host*/
+    unsigned int l3_cache_shared_left; /*be default it shoulbe equal to l3_cache*/
+    unsigned int l3_cache_per_bit; /*l3_cache/ max_cbm_len / n_socket*/
     int n_sockets; /*indicate of how many schemas left*/
     VirRscSchemaPtr shared_schemas; /*schemas of currently host by OR of all schemas*/
     VirRscSchemaPtr non_shared_schemas; /*schemas of currently host by OR of all schemas*/
     VirRscSchemaPtr default_schemas; /*schemas of currently host by OR of all schemas*/
     unsigned int non_shared_bit; /* how many bit are use for non_shared cache*/
+
+    unsigned int l3_cache_left[64]; /* how many cache left on each cell/socket */
 };
 
 typedef struct _VirRscCtrlType VirRscCtrlType;

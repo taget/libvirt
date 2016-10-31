@@ -552,12 +552,17 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
     pvri->non_shared_schemas = NULL;
     pvri->default_schemas = NULL;
 
+    // init l3 cache left on each socket (removed reserved cache amounts)
+    for(int i = 0; i < pvri->n_sockets; i++) {
+        pvri->l3_cache_left[i] = pvri->l3_cache_non_shared_left / pvri->n_sockets;
+        VIR_WARN("pvri->l3_cache_left[%d] = %u", i, pvri->l3_cache_left[i]);
+    }
+
     pvrtype->type = VIR_RscCTRL_L3;
     pvrtype->info = *pvri;
     pvrsc->resources[VIR_RscCTRL_L3] = *pvrtype;
     pvrsc->partitions = VirRscctrlGetAllPartitions(&(pvrsc->npartitions));
 
-    /* load resources for VIR_RscCTRL_L3*/
     return 0;
 
 cleanup:
@@ -575,6 +580,7 @@ int VirInitSchema(VirRscCtrl *pvrsc)
     VirRscSchemaPtr pschema_default = NULL;
 
     pvri = &(pvrsc->resources[VIR_RscCTRL_L3].info);
+    int default_schema = (1 << pvri->max_cbm_len) - 1;
 
     if(VIR_ALLOC_N_QUIET(pschema, pvri->n_sockets) < 0)
         return -1;
@@ -589,7 +595,7 @@ int VirInitSchema(VirRscCtrl *pvrsc)
     p = pvrsc->partitions;
 
     while(p != NULL) {
-        for(int i=0; i<pvri->n_sockets; i++) {
+        for(int i=0 ; i<pvri->n_sockets; i++) {
             /* 'n' stands for non-shared*/
             if(p->name[0] == 'n') {
                 pschema[i].schema |= p->schemas[i].schema;
@@ -621,6 +627,13 @@ int VirInitSchema(VirRscCtrl *pvrsc)
     pvri->l3_cache_non_shared_left -= used;
     pvri->l3_cache_shared_left = pvri->l3_cache - pvri->l3_cache_non_shared_left;
 
+
+    // if the default schema for a socket are changed
+    // l3 cache can not be allocated on that socket.
+    for(int i = 0 ; i < pvri->n_sockets; i++) {
+        if((pvri->default_schemas[i].schema & default_schema) != default_schema)
+            pvri->l3_cache_left[i] = 0;
+    }
     // refresh default schema
     return 0;
 }
@@ -740,13 +753,22 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
                             VIR_ERROR("error to find cpu");
                         }
                         //TODO return the actual_cache back to vm
-                        VIR_WARN("actual cache is %d", actual_cache);
-                        schemas[i] += CalCBMmask(&vrc,
-                                virDomainNumaGetNodeL3CacheSize(def->numa, i),
-                                &actual_cache);
-                        // Notes: we break here is assuming all cpumask are on
-                        // same node
-                        break;
+                        if(virDomainNumaGetNodeL3CacheSize(def->numa, i) >
+                                vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[i]) {
+                            VIR_ERROR("not enough l3 cache on cell %zu", i);
+                            return -1;
+                        }
+                        else {
+                            schemas[i] += CalCBMmask(&vrc,
+                                    virDomainNumaGetNodeL3CacheSize(def->numa, i),
+                                    &actual_cache);
+                            vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[i] -=
+                                actual_cache;
+                            // Notes: we break here is assuming all cpumask are on
+                            // same node
+                            VIR_WARN("actual cache is %d", actual_cache);
+                            break;
+                        }
                     }
                 }
                 // Notes: we break here is assuming all cpumask are on
