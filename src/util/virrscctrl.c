@@ -109,15 +109,12 @@ static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid)
     if(asprintf(&schema_str, "L3:0=%x;1=%x", p->resources[VIR_RscCTRL_L3].info.default_schemas[0].schema, p->resources[VIR_RscCTRL_L3].info.default_schemas[1].schema) < 0 )
         goto cleanup;
 
-    VIR_WARN("default schema is %s ", schema_str);
     if(asprintf(&schema_path, "%s/schemas", RSC_DIR) < 0)
         goto cleanup;
 
-    VIR_WARN("default schema path is %s ", schema_path);
     if (virFileWriteStr(schema_path, schema_str, 0644) < 0) {
         goto cleanup;
     }
-    VIR_WARN("default schema path is %s ", schema_path);
     VIR_WARN("default schema  is %s ", schema_str);
 
     ret = 0;
@@ -716,6 +713,8 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
 
     int schemas[64] = {0};
 
+    VIR_WARN("node count  %zu", node_count);
+
     for(i = 0; i < node_count; i++) {
         VIR_WARN("l3_cache for node %zu is %llu", i, virDomainNumaGetNodeL3CacheSize(def->numa, i));
         p = virDomainNumaGetNodeCpumask(def->numa, i);
@@ -760,8 +759,9 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
     for(i = 0; i < node_count; i++) {
         vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema -= schemas[i];
     }
-
-    return VirWriteSchema(&vrc, pid);
+    if(node_count > 0)
+        return VirWriteSchema(&vrc, pid);
+    return 0;
 }
 
 int VirRscctrlRefresh(void)

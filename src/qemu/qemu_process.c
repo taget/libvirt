@@ -2423,8 +2423,12 @@ qemuProcessSetupEmulator(virDomainObjPtr vm, virCapsPtr caps)
     VIR_WARN("l3_cache_Occ = %llu", vm->def->l3cache.l3_cache_Occ);
     VIR_WARN("shared = %d", vm->def->l3cache.shared);
 
-    if (VirRscCtrlSetL3Cache(vm->pid, vm->def, caps) < 0)
-        return -1;
+    // Need to check if we have defined l3 cache for each numa node
+    if (virRscctrlAvailable() &&
+            virDomainNumaGetNodeCount(vm->def->numa)) {
+        if (VirRscCtrlSetL3Cache(vm->pid, vm->def, caps) < 0)
+            return -1;
+    }
 
     return qemuProcessSetupPid(vm, vm->pid, VIR_CGROUP_THREAD_EMULATOR,
                                0, vm->def->cputune.emulatorpin,
