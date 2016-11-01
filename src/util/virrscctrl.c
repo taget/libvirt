@@ -753,17 +753,18 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
                                     _("Can't find cell id for cpu %zu"), k);
                         }
                         //TODO return the actual_cache back to vm
-                        if(virDomainNumaGetNodeL3CacheSize(def->numa, i) >
-                                vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[i]) {
+                        if(virDomainNumaGetNodeL3CacheSize(def->numa, cell_id) >
+                                vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[cell_id]) {
                             virReportError(VIR_ERR_NO_L3_CACHE,
                                     _("Not enough l3 cache on cell %zu"), i);
                             return -1;
                         }
                         else {
-                            schemas[i] += CalCBMmask(&vrc,
+                            VIR_WARN("cell_id = %d", cell_id);
+                            schemas[cell_id] += CalCBMmask(&vrc,
                                     virDomainNumaGetNodeL3CacheSize(def->numa, i),
                                     &actual_cache);
-                            vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[i] -=
+                            vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[cell_id] -=
                                 actual_cache;
                             // Notes: we break here is assuming all cpumask are on
                             // same node
@@ -779,8 +780,9 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
         }
     }
 
-    for(i = 0; i < node_count; i++) {
+    for(i = 0; i < nodeinfo.nodes; i++) {
         vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema -= schemas[i];
+        VIR_WARN("default schema after minus is %x", vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema);
     }
     if(node_count > 0)
         return VirWriteSchema(&vrc, pid);
