@@ -137,7 +137,8 @@ VIR_ENUM_IMPL(virErrorDomain, VIR_ERR_DOMAIN_LAST,
               "Log Manager",
               "Xen XL Config",
 
-              "Perf",
+              "Perf", /* 65 */
+              "Rscctrl",
     )
 
 
@@ -1399,6 +1400,12 @@ virErrorMsg(virErrorNumber error, const char *info)
                 errmsg = _("guest agent replied with wrong id to guest-sync command");
             else
                 errmsg = _("guest agent replied with wrong id to guest-sync command: %s");
+            break;
+         case VIR_ERR_NO_L3_CACHE:
+            if (info == NULL)
+                errmsg = _("Not enough l3 cache can be allocated on host");
+            else
+                errmsg = _("Not enough l3 cache can be allocated on host: %s");
             break;
     }
     return errmsg;

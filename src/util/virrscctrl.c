@@ -49,7 +49,7 @@
 VIR_LOG_INIT("util.rscctrl");
 
 
-#define VIR_FROM_THIS VIR_FROM_NONE
+#define VIR_FROM_THIS VIR_FROM_RSCCTRL
 #define RSC_DIR "/sys/fs/rscctrl"
 #define MAX_TASKS_FILE (10*1024*1024)
 #define MAX_SCHEMA_LEN 1024
@@ -555,7 +555,6 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
     // init l3 cache left on each socket (removed reserved cache amounts)
     for(int i = 0; i < pvri->n_sockets; i++) {
         pvri->l3_cache_left[i] = pvri->l3_cache_non_shared_left / pvri->n_sockets;
-        VIR_WARN("pvri->l3_cache_left[%d] = %u", i, pvri->l3_cache_left[i]);
     }
 
     pvrtype->type = VIR_RscCTRL_L3;
@@ -702,7 +701,7 @@ static int CalCBMmask(VirRscCtrlPtr pRsc, int cache, unsigned int* actual_cache)
 
 int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr caps)
 {
-    VIR_WARN("%llu, %p, %p", pid, (void*)def, (void*)caps);
+    VIR_DEBUG("%llu, %p, %p", pid, (void*)def, (void*)caps);
 
     size_t i, j, k;
     size_t node_count = virDomainNumaGetNodeCount(def->numa);
@@ -750,12 +749,14 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
                         // todo return actual_cache for each numa cell;
                         if(cell_id < 0)
                         {
-                            VIR_ERROR("error to find cpu");
+                            virReportError(VIR_ERR_INTERNAL_ERROR,
+                                    _("Can't find cell id for cpu %zu"), k);
                         }
                         //TODO return the actual_cache back to vm
                         if(virDomainNumaGetNodeL3CacheSize(def->numa, i) >
                                 vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[i]) {
-                            VIR_ERROR("not enough l3 cache on cell %zu", i);
+                            virReportError(VIR_ERR_NO_L3_CACHE,
+                                    _("Not enough l3 cache on cell %zu"), i);
                             return -1;
                         }
                         else {

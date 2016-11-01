@@ -131,6 +131,7 @@ typedef enum {
     VIR_FROM_XENXL = 64,        /* Error from Xen xl config code */
 
     VIR_FROM_PERF = 65,         /* Error from perf */
+    VIR_FROM_RSCCTRL = 66,      /* Error from rscctrl */
 
 # ifdef VIR_ENUM_SENTINELS
     VIR_ERR_DOMAIN_LAST
@@ -317,6 +318,7 @@ typedef enum {
     VIR_ERR_NO_CLIENT = 96,             /* Client was not found */
     VIR_ERR_AGENT_UNSYNCED = 97,        /* guest agent replies with wrong id
                                            to guest-sync command */
+    VIR_ERR_NO_L3_CACHE = 98,           /* not enough l3 cache can be allocated */
 } virErrorNumber;
 
 /**
