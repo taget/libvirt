@@ -531,7 +531,7 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
                                unsigned int *sockets,
                                unsigned int *cores,
                                unsigned int *threads,
-                               unsigned int *l3_cache)
+                               unsigned long long *l3_cache)
 {
     virBitmapPtr present_cpus_map = NULL;
     virBitmapPtr online_cpus_map = NULL;
@@ -572,7 +572,7 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
                     (*p == '\0' || *p == '.' || c_isspace(*p)))
                     *mhz = ui;
             }
-            if (STRPREFIX(buf, "cache size")) {
+            if (STRPREFIX(buf, "cache size") && *l3_cache == 0 ) {
                 char *p;
                 unsigned int ui;
                 buf += 10;
@@ -586,7 +586,7 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
                     goto cleanup;
                 }
                 if (virStrToLong_ui(buf+1, &p, 10, &ui) == 0 &&
-                        (*p=='K' && *(p+1)=='B'))
+                        (*(p+1)=='K' && *(p+2)=='B'))
                     *l3_cache = ui;
             }
         } else if (ARCH_IS_PPC(arch)) {
@@ -978,7 +978,7 @@ virHostCPUGetInfo(virArch hostarch ATTRIBUTE_UNUSED,
                   unsigned int *sockets ATTRIBUTE_UNUSED,
                   unsigned int *cores ATTRIBUTE_UNUSED,
                   unsigned int *threads ATTRIBUTE_UNUSED,
-                  unsigned int *l3_cache ATTRIBUTE_UNUSED)
+                  unsigned long long *l3_cache ATTRIBUTE_UNUSED)
 {
 #ifdef __linux__
     int ret = -1;

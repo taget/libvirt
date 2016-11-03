@@ -44,7 +44,8 @@ linuxTestCompareFiles(const char *cpuinfofile,
     if (virHostCPUGetInfoPopulateLinux(cpuinfo, arch,
                                        &nodeinfo.cpus, &nodeinfo.mhz,
                                        &nodeinfo.nodes, &nodeinfo.sockets,
-                                       &nodeinfo.cores, &nodeinfo.threads) < 0) {
+                                       &nodeinfo.cores, &nodeinfo.threads,
+                                       &nodeinfo.l3_cache) < 0) {
         if (virTestGetDebug()) {
             if (virGetLastError())
                 VIR_TEST_DEBUG("\n%s\n", virGetLastErrorMessage());

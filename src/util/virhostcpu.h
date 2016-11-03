@@ -50,7 +50,7 @@ int virHostCPUGetInfo(virArch hostarch,
                       unsigned int *sockets,
                       unsigned int *cores,
                       unsigned int *threads,
-                      unsigned int *l3_cache);
+                      unsigned long long *l3_cache);
 
 int virHostCPUGetKVMMaxVCPUs(void);
 

@@ -156,9 +156,6 @@ nodeGetInfo(virNodeInfoPtr nodeinfo)
                           &nodeinfo->l3_cache) < 0)
         return -1;
 
-    // TODO(eliqiao): get host's l3_cache size
-    nodeinfo->l3_cache = 56320;
-    // eliqiao
     return 0;
 }
 
@@ -207,7 +204,7 @@ nodeCapsInitNUMAFake(const char *cpupath ATTRIBUTE_UNUSED,
     }
 
     if (virCapabilitiesAddHostNUMACell(caps, 0,
-                                       nodeinfo.memory,
+                                       nodeinfo.memory, 0,
 #ifdef __linux__
                                        onlinecpus, cpus,
 #else
@@ -341,6 +338,7 @@ nodeCapsInitNUMA(virCapsPtr caps)
 {
     int n;
     unsigned long long memory;
+    unsigned long long l3_cache;
     virCapsHostNUMACellCPUPtr cpus = NULL;
     virBitmapPtr cpumap = NULL;
     virCapsHostNUMACellSiblingInfoPtr siblings = NULL;
@@ -350,6 +348,11 @@ nodeCapsInitNUMA(virCapsPtr caps)
     int ret = -1;
     int ncpus = 0;
     int cpu;
+    virNodeInfo nodeinfo;
+    if (nodeGetInfo(&nodeinfo) < 0)
+        return -1;
+    l3_cache = nodeinfo.l3_cache;
+
     bool topology_failed = false;
     int max_node;
 
@@ -360,6 +363,8 @@ nodeCapsInitNUMA(virCapsPtr caps)
 
     if ((max_node = virNumaGetMaxNode()) < 0)
         goto cleanup;
+
+    l3_cache = l3_cache / (max_node + 1);
 
     for (n = 0; n <= max_node; n++) {
         size_t i;
@@ -394,8 +399,9 @@ nodeCapsInitNUMA(virCapsPtr caps)
         /* Detect the amount of memory in the numa cell in KiB */
         virNumaGetNodeMemory(n, &memory, NULL);
         memory >>= 10;
-
-        if (virCapabilitiesAddHostNUMACell(caps, n, memory,
+        if(l3_cache <=0)
+            l3_cache = 100;
+        if (virCapabilitiesAddHostNUMACell(caps, n, memory, l3_cache,
                                            ncpus, cpus,
                                            nsiblings, siblings,
                                            npageinfo, pageinfo) < 0)
