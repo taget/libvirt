@@ -347,7 +347,7 @@ testBuildCapabilities(virConnectPtr conn)
 
         pages[0].avail = privconn->cells[i].mem / pages[0].size;
 
-        if (virCapabilitiesAddHostNUMACell(caps, i, privconn->cells[i].mem,
+        if (virCapabilitiesAddHostNUMACell(caps, i, privconn->cells[i].mem, 0,
                                            privconn->cells[i].numCpus,
                                            cpu_cells, 0, NULL, nPages, pages) < 0)
             goto error;

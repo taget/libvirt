@@ -115,6 +115,7 @@ struct _virCapsHostNUMACell {
     int num;
     int ncpus;
     unsigned long long mem; /* in kibibytes */
+    unsigned long long l3_cache; /* in kibibytes */
     virCapsHostNUMACellCPUPtr cpus;
     int nsiblings;
     virCapsHostNUMACellSiblingInfoPtr siblings;
@@ -228,6 +229,7 @@ int
 virCapabilitiesAddHostNUMACell(virCapsPtr caps,
                                int num,
                                unsigned long long mem,
+                               unsigned long long l3_cache,
                                int ncpus,
                                virCapsHostNUMACellCPUPtr cpus,
                                int nsiblings,

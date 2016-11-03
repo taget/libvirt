@@ -293,6 +293,7 @@ virCapabilitiesSetNetPrefix(virCapsPtr caps,
  * @caps: capabilities to extend
  * @num: ID number of NUMA cell
  * @mem: Total size of memory in the NUMA node (in KiB)
+ * @l3_cache: Total size of l3 cache in the NUMA node (in KiB)
  * @ncpus: number of CPUs in cell
  * @cpus: array of CPU definition structures, the pointer is stolen
  * @nsiblings: number of sibling NUMA nodes
@@ -307,6 +308,7 @@ int
 virCapabilitiesAddHostNUMACell(virCapsPtr caps,
                                int num,
                                unsigned long long mem,
+                               unsigned long long l3_cache,
                                int ncpus,
                                virCapsHostNUMACellCPUPtr cpus,
                                int nsiblings,
@@ -325,6 +327,7 @@ virCapabilitiesAddHostNUMACell(virCapsPtr caps,
 
     cell->num = num;
     cell->mem = mem;
+    cell->l3_cache = l3_cache;
     cell->ncpus = ncpus;
     cell->cpus = cpus;
     cell->nsiblings = nsiblings;
@@ -795,6 +798,11 @@ virCapabilitiesFormatNUMATopology(virBufferPtr buf,
         if (cells[i]->mem)
             virBufferAsprintf(buf, "<memory unit='KiB'>%llu</memory>\n",
                               cells[i]->mem);
+        /* Print out the numacell l3_cache total if it is available */
+        if (cells[i]->l3_cache)
+            virBufferAsprintf(buf, "<l3_cache unit='KiB'>%llu</l3_cache>\n",
+                              cells[i]->l3_cache);
+
 
         for (j = 0; j < cells[i]->npageinfo; j++) {
             virBufferAsprintf(buf, "<pages unit='KiB' size='%u'>%zu</pages>\n",

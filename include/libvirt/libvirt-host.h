@@ -167,7 +167,7 @@ struct _virNodeInfo {
                              processors in case of unusual NUMA topology*/
     unsigned int threads; /* number of threads per core, 1 in case of
                              unusual numa topology */
-    unsigned int l3_cache; /* cache size in kilobytes */
+    unsigned long long l3_cache; /* cache size in kilobytes */
 };
 
 /**
