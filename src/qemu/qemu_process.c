@@ -2420,8 +2420,6 @@ qemuProcessSetupEmulator(virDomainObjPtr vm, virCapsPtr caps)
      * if host support cat and domain has numa setting
      */
     VIR_WARN("occupy l3 cache for domain !!");
-    VIR_WARN("l3_cache_Occ = %llu", vm->def->l3cache.l3_cache_Occ);
-    VIR_WARN("shared = %d", vm->def->l3cache.shared);
 
     // Need to check if we have defined l3 cache for each numa node
     if (virRscctrlAvailable() &&

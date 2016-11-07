@@ -70,7 +70,7 @@ static int VirBit_Is_1(int bits)
 /*
  * VirWriteSchema to write schema
  */
-static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid)
+static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid, int *schemas)
 {
     int ret = -1;
     char* partition_name = NULL;
@@ -83,7 +83,11 @@ static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid)
     // if(asprintf(&schema_str, "L3:0=%x;1=%x", schema[0], schema[1]) <0)
     // goto cleanup;
     if(0 != pid) {
-        if(asprintf(&schema_str, "L3:0=%x;1=%x", default_schema, default_schema) <0)
+        // kernel interface of rscctrl doesn't allow us to set the schema of 0
+        // use 1 to instead of it
+        if(asprintf(&schema_str, "L3:0=%x;1=%x",
+                    schemas[0]>0 ? default_schema: 1,
+                    schemas[1]>0 ? default_schema: 1) <0)
             goto cleanup;
 
         if(asprintf(&partition_name, "n-%llu", pid) < 0)
@@ -156,7 +160,7 @@ static int VirRscctrlRefreshSchema(VirRscCtrlPtr p)
         pPar = pPar->next;
     }
 
-    return VirWriteSchema(p, 0);
+    return VirWriteSchema(p, 0, NULL);
 }
 
 bool virRscctrlAvailable(void)
@@ -753,14 +757,13 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
                                     _("Can't find cell id for cpu %zu"), k);
                         }
                         //TODO return the actual_cache back to vm
-                        if(virDomainNumaGetNodeL3CacheSize(def->numa, cell_id) >
+                        if(virDomainNumaGetNodeL3CacheSize(def->numa, i) >
                                 vrc.resources[VIR_RscCTRL_L3].info.l3_cache_left[cell_id]) {
                             virReportError(VIR_ERR_NO_L3_CACHE,
-                                    _("Not enough l3 cache on cell %zu"), i);
+                                    _("Not enough l3 cache on cell %d"), cell_id);
                             return -1;
                         }
                         else {
-                            VIR_WARN("cell_id = %d", cell_id);
                             schemas[cell_id] += CalCBMmask(&vrc,
                                     virDomainNumaGetNodeL3CacheSize(def->numa, i),
                                     &actual_cache);
@@ -782,10 +785,11 @@ int VirRscCtrlSetL3Cache(unsigned long long pid, virDomainDefPtr def, virCapsPtr
 
     for(i = 0; i < nodeinfo.nodes; i++) {
         vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema -= schemas[i];
-        VIR_WARN("default schema after minus is %x", vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema);
+        VIR_WARN("default schema[%zu] after minus is %x",
+                 i, vrc.resources[VIR_RscCTRL_L3].info.default_schemas[i].schema);
     }
     if(node_count > 0)
-        return VirWriteSchema(&vrc, pid);
+        return VirWriteSchema(&vrc, pid, schemas);
     return 0;
 }
 
@@ -893,7 +897,7 @@ int VirRscCtrlSetUnsharedCache(VirRscCtrlPtr pRsc, unsigned long long pid, unsig
         p ++;
     }
 
-    return VirWriteSchema(pRsc, pid);
+    return VirWriteSchema(pRsc, pid, NULL);
 }
 
 int VirRscCtrlSetSharedCache(VirRscCtrlPtr pRsc, unsigned long long pid, unsigned long long cache)
