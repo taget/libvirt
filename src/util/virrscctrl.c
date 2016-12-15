@@ -31,6 +31,8 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <sys/stat.h>
+///////////// remove this after fixing write
+#include <unistd.h>
 
 #include "virutil.h"
 #include "viralloc.h"
@@ -50,7 +52,7 @@ VIR_LOG_INIT("util.rscctrl");
 
 
 #define VIR_FROM_THIS VIR_FROM_RSCCTRL
-#define RSC_DIR "/sys/fs/rscctrl"
+#define RSC_DIR "/sys/fs/resctrl"
 #define MAX_TASKS_FILE (10*1024*1024)
 #define MAX_SCHEMA_LEN 1024
 #define MAX_CBM_BIT_LEN 64
@@ -85,7 +87,7 @@ static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid, int *schemas)
     if(0 != pid) {
         // kernel interface of rscctrl doesn't allow us to set the schema of 0
         // use 1 to instead of it
-        if(asprintf(&schema_str, "L3:0=%x;1=%x",
+        if(asprintf(&schema_str, "L3:0=%x;1=%x\n",
                     schemas[0]>0 ? default_schema: 1,
                     schemas[1]>0 ? default_schema: 1) <0)
             goto cleanup;
@@ -98,7 +100,7 @@ static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid, int *schemas)
             goto cleanup;
         }
 
-        if(asprintf(&pid_str, "%llu", pid) < 0)
+        if(asprintf(&pid_str, "%llu\n", pid) < 0)
             goto cleanup;
 
         if(VirRscctrlAddTask(partition_name, pid_str) < 0) {
@@ -110,10 +112,10 @@ static int VirWriteSchema(VirRscCtrlPtr p, unsigned long long pid, int *schemas)
 
     /* update default partition */
     // FIXME(eliqiao): loop schema
-    if(asprintf(&schema_str, "L3:0=%x;1=%x", p->resources[VIR_RscCTRL_L3].info.default_schemas[0].schema, p->resources[VIR_RscCTRL_L3].info.default_schemas[1].schema) < 0 )
+    if(asprintf(&schema_str, "L3:0=%x;1=%x\n", p->resources[VIR_RscCTRL_L3].info.default_schemas[0].schema, p->resources[VIR_RscCTRL_L3].info.default_schemas[1].schema) < 0 )
         goto cleanup;
 
-    if(asprintf(&schema_path, "%s/schemas", RSC_DIR) < 0)
+    if(asprintf(&schema_path, "%s/schemata", RSC_DIR) < 0)
         goto cleanup;
 
     if (virFileWriteStr(schema_path, schema_str, 0644) < 0) {
@@ -165,7 +167,7 @@ static int VirRscctrlRefreshSchema(VirRscCtrlPtr p)
 
 bool virRscctrlAvailable(void)
 {
-    if (!virFileExists("/sys/fs/rscctrl/info"))
+    if (!virFileExists("/sys/fs/resctrl/info"))
         return false;
     return true;
 }
@@ -177,7 +179,7 @@ int virRscctrlGetUnsignd(const char *item, unsigned int *len)
     char *tmp;
     char *path;
 
-    if (asprintf(&path, "/sys/fs/rscctrl/info/l3/%s", item) < 0)
+    if (asprintf(&path, "%s/info/L3/%s", RSC_DIR, item) < 0)
         return -1;
 
     if (virFileReadAll(path, 10, &buf) < 0) {
@@ -203,13 +205,19 @@ cleanup:
 
 int virRscctrlGetMaxclosId(unsigned int *len)
 {
-    return virRscctrlGetUnsignd("max_closid", len);
+    // TODO: rename function name
+    return virRscctrlGetUnsignd("num_closids", len);
 }
 
 
 int virRscctrlGetMaxL3Cbmlen(unsigned int *len)
 {
-    return virRscctrlGetUnsignd("max_cbm_len", len);
+    // TODO: kernel doesn't provide max cbm len
+    // hard code it as 20 for now, later, is should be calculated
+    // from default schemata
+    * len = 20;
+    return 0;
+    // return virRscctrlGetUnsignd("max_cbm_len", len);
 }
 
 
@@ -231,10 +239,10 @@ int VirRscctrlAddNewPartition(const char *name, const char *schema)
         goto cleanup;
     }
 
-    if ((rc = asprintf(&schema_path, "%s/%s", path, "schemas")) < 0) {
+    if ((rc = asprintf(&schema_path, "%s/%s", path, "schemata")) < 0) {
         rmdir(path);
         goto cleanup;
-     }
+    }
 
     if ((rc = virFileWriteStr(schema_path, schema, 0644)) < 0) {
         rmdir(path);
@@ -274,12 +282,12 @@ int VirRscctrlGetSchemas(const char *name, char **schemas)
     char *tmp;
 
     if(name == NULL) {
-        if ((rc = asprintf(&path, "%s/schemas", RSC_DIR)) < 0) {
+        if ((rc = asprintf(&path, "%s/schemata", RSC_DIR)) < 0) {
             return rc;
         }
     }
     else {
-        if ((rc = asprintf(&path, "%s/%s/schemas", RSC_DIR, name)) < 0) {
+        if ((rc = asprintf(&path, "%s/%s/schemata", RSC_DIR, name)) < 0) {
             return rc;
         }
     }
@@ -460,6 +468,7 @@ int VirRscctrlAddTask(const char *p, const char *pid)
     char *tasks_path;
     int writefd;
 
+    VIR_WARN("p=%s, pid=%s",p, pid);
     /*Root schema*/
     if (p == NULL) {
         if ((rc = asprintf(&tasks_path, "%s/tasks", RSC_DIR)) < 0)
@@ -469,6 +478,8 @@ int VirRscctrlAddTask(const char *p, const char *pid)
         if ((rc = asprintf(&tasks_path, "%s/%s/tasks", RSC_DIR, p)) < 0)
         return rc;
     }
+
+    VIR_WARN("%s", tasks_path);
 
     if (!virFileExists(tasks_path)) {
         return -1;
