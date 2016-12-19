@@ -560,8 +560,8 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
     pvri->l3_cache = nodeinfo.l3_cache;
     pvri->l3_cache_non_shared_left = nodeinfo.l3_cache / 2;
     pvri->l3_cache_shared_left =nodeinfo.l3_cache ;
-    // 1048K
-    pvri->l3_cache_per_bit = nodeinfo.l3_cache / pvri->n_sockets / pvri->max_cbm_len;
+    // 2816K
+    pvri->l3_cache_per_bit = nodeinfo.l3_cache / pvri->max_cbm_len;
     pvri->shared_schemas = NULL;
     pvri->non_shared_bit = pvri->max_cbm_len / 2;
     pvri->non_shared_schemas = NULL;
@@ -569,7 +569,7 @@ int VirInitRscctrl(VirRscCtrl *pvrsc)
 
     // init l3 cache left on each socket (removed reserved cache amounts)
     for(int i = 0; i < pvri->n_sockets; i++) {
-        pvri->l3_cache_left[i] = pvri->l3_cache_non_shared_left / pvri->n_sockets;
+        pvri->l3_cache_left[i] = pvri->l3_cache_non_shared_left;
     }
 
     pvrtype->type = VIR_RscCTRL_L3;
