@@ -364,8 +364,6 @@ nodeCapsInitNUMA(virCapsPtr caps)
     if ((max_node = virNumaGetMaxNode()) < 0)
         goto cleanup;
 
-    l3_cache = l3_cache / (max_node + 1);
-
     for (n = 0; n <= max_node; n++) {
         size_t i;
 
