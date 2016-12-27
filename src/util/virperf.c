@@ -202,6 +202,11 @@ virPerfEventEnable(virPerfPtr perf,
     attr.type = event_attr->attrType;
     attr.config = event_attr->attrConfig;
 
+    // Workaround for rdt perf event, the first opened fd is not usable.
+    if (type == VIR_PERF_EVENT_CMT) {
+        int tmpfd = syscall(__NR_perf_event_open, &attr, pid, -1, -1, 0);
+        ioctl(tmpfd, PERF_EVENT_IOC_ENABLE);
+    }
     event->fd = syscall(__NR_perf_event_open, &attr, pid, -1, -1, 0);
     if (event->fd < 0) {
         virReportSystemError(errno,
