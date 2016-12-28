@@ -206,6 +206,40 @@ void virHostCPUSetSysFSSystemPathLinux(const char *path)
         sysfs_system_path = SYSFS_SYSTEM_PATH;
 }
 
+/* Get a String value*/
+static int
+virHostCPUGetStrValue(const char *dir, unsigned int cpu, const char *file, char *value_str)
+{
+    char *path;
+    FILE *pathfp;
+    int ret = -1;
+
+    if (virAsprintf(&path, "%s/cpu%u/%s", dir, cpu, file) < 0)
+        return -1;
+
+    pathfp = fopen(path, "r");
+    if (pathfp == NULL) {
+        if (errno == ENOENT)
+            return -2;
+        else
+            virReportSystemError(errno, _("cannot open %s"), path);
+        goto cleanup;
+    }
+
+    if (fgets(value_str, sizeof(value_str), pathfp) == NULL) {
+        virReportSystemError(errno, _("cannot read from %s"), path);
+        goto cleanup;
+    }
+
+    ret = 0;
+
+ cleanup:
+    VIR_FORCE_FCLOSE(pathfp);
+    VIR_FREE(path);
+    return ret;
+}
+
+
 /* Return the positive decimal contents of the given
  * DIR/cpu%u/FILE, or -1 on error.  If DEFAULT_VALUE is non-negative
  * and the file could not be found, return that instead of an error;
@@ -216,39 +250,64 @@ static int
 virHostCPUGetValue(const char *dir, unsigned int cpu, const char *file,
                    int default_value)
 {
-    char *path;
-    FILE *pathfp;
     int value = -1;
     char value_str[INT_BUFSIZE_BOUND(value)];
     char *tmp;
+    int ret;
 
-    if (virAsprintf(&path, "%s/cpu%u/%s", dir, cpu, file) < 0)
-        return -1;
-
-    pathfp = fopen(path, "r");
-    if (pathfp == NULL) {
-        if (default_value >= 0 && errno == ENOENT)
-            value = default_value;
+    if ((ret = (virHostCPUGetStrValue(dir, cpu, file, value_str))) < 0) {
+        if (ret == -2 && default_value >= 0)
+            return default_value;
         else
-            virReportSystemError(errno, _("cannot open %s"), path);
-        goto cleanup;
+            return -1;
     }
 
-    if (fgets(value_str, sizeof(value_str), pathfp) == NULL) {
-        virReportSystemError(errno, _("cannot read from %s"), path);
-        goto cleanup;
-    }
     if (virStrToLong_i(value_str, &tmp, 10, &value) < 0) {
         virReportError(VIR_ERR_INTERNAL_ERROR,
                        _("could not convert '%s' to an integer"),
                        value_str);
-        goto cleanup;
+        return -1;
     }
+    return value;
+}
 
- cleanup:
-    VIR_FORCE_FCLOSE(pathfp);
-    VIR_FREE(path);
+/* Return specific type cache size in KiB of given cpu
+   -1 on error happened */
+static
+int virHostCPUGetCache(unsigned int cpu, unsigned int type)
+{
+    char *cachedir = NULL;
+    char *cpudir;
+    char *unit = NULL;
+    char *tmp;
+    int value = -1;
+    unsigned long long size;
+    char value_str[INT_BUFSIZE_BOUND(value)];
 
+    if (virAsprintf(&cpudir, "%s/cpu", sysfs_system_path) < 0)
+        return -1;
+
+    if (virAsprintf(&cachedir, "cache/index%u/size", type) < 0)
+        goto error;
+
+    if (virHostCPUGetStrValue(cpudir, cpu, cachedir, value_str) < 0)
+        goto error;
+
+    if ((tmp = strchr(value_str, '\n'))) *tmp = '\0';
+
+    if (virStrToLong_i(value_str, &unit, 10, &value) < 0)
+        goto error;
+
+    size = value;
+
+    if (virScaleInteger(&size, unit, 1, ULLONG_MAX) < 0)
+        goto error;
+
+    return size / 1024;
+
+ error:
+    VIR_FREE(cpudir);
+    VIR_FREE(cachedir);
     return value;
 }
 
@@ -298,6 +357,23 @@ virHostCPUParseSocket(const char *dir,
             ret = 0;
     }
 
+    return ret;
+}
+
+/* return socket id of a given cpu*/
+static
+int virHostCPUGetSocketId(virArch hostarch, unsigned int cpu)
+{
+    char *cpu_dir;
+    int ret = -1;
+
+    if (virAsprintf(&cpu_dir, "%s/cpu", sysfs_system_path) < 0)
+        goto cleanup;
+
+    ret = virHostCPUParseSocket(cpu_dir, hostarch, cpu);
+
+ cleanup:
+    VIR_FREE(cpu_dir);
     return ret;
 }
 
@@ -1346,3 +1422,79 @@ virHostCPUGetKVMMaxVCPUs(void)
     return -1;
 }
 #endif /* HAVE_LINUX_KVM_H */
+
+/* Fill all cache bank informations
+ * Return a list of virResCacheBankPtr, and fill cache bank information
+ * by loop for all cpus on host, number of cache bank will be set in nbanks
+ *
+ * NULL if error happened, and nbanks will be set 0. */
+virResCacheBankPtr virHostCPUGetCacheBanks(virArch arch, int type, size_t *nbanks, int cbm_len)
+{
+    int npresent_cpus;
+    int idx;
+    size_t i;
+    virResCacheBankPtr bank;
+
+    *nbanks = 0;
+    if ((npresent_cpus = virHostCPUGetCount()) < 0)
+        return NULL;
+
+    switch (type) {
+        case VIR_RDT_RESOURCE_L3:
+        case VIR_RDT_RESOURCE_L3DATA:
+        case VIR_RDT_RESOURCE_L3CODE:
+            idx = 3;
+            break;
+        case VIR_RDT_RESOURCE_L2:
+            idx = 2;
+            break;
+        default:
+            idx = -1;
+    }
+
+    if (idx == -1)
+        return NULL;
+
+    if (VIR_ALLOC_N(bank, 1) < 0)
+        return NULL;
+
+    *nbanks = 1;
+
+    for (i = 0; i < npresent_cpus; i ++) {
+        int s_id;
+        int cache_size;
+
+        if ((s_id = virHostCPUGetSocketId(arch, i)) < 0)
+            goto error;
+
+        /* Expand cache bank array */
+        if (s_id > (*nbanks - 1)) {
+            size_t cur = *nbanks;
+            size_t exp = s_id - (*nbanks) + 1;
+            if (VIR_EXPAND_N(bank, cur, exp) < 0)
+                goto error;
+            *nbanks = s_id + 1;
+        }
+
+        if (bank[s_id].cpu_mask == NULL) {
+            if (!(bank[s_id].cpu_mask = virBitmapNew(npresent_cpus)))
+                goto error;
+        }
+
+        ignore_value(virBitmapSetBit(bank[s_id].cpu_mask, i));
+
+        if (bank[s_id].cache_size == 0) {
+            if ((cache_size = virHostCPUGetCache(i, idx)) < 0)
+                goto error;
+
+            bank[s_id].cache_size = cache_size;
+            bank[s_id].cache_min = cache_size / cbm_len;
+        }
+    }
+    return bank;
+
+ error:
+    *nbanks = 0;
+    VIR_FREE(bank);
+    return NULL;
+}

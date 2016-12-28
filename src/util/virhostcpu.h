@@ -27,6 +27,7 @@
 # include "internal.h"
 # include "virarch.h"
 # include "virbitmap.h"
+# include "virresctrl.h"
 
 # define VIR_HOST_CPU_MASK_LEN 1024
 
@@ -57,5 +58,10 @@ int virHostCPUGetKVMMaxVCPUs(void);
 int virHostCPUStatsAssign(virNodeCPUStatsPtr param,
                           const char *name,
                           unsigned long long value);
+
+virResCacheBankPtr virHostCPUGetCacheBanks(virArch arch,
+                                           int type,
+                                           size_t *nbanks,
+                                           int cbm_len);
 
 #endif /* __VIR_HOSTCPU_H__*/

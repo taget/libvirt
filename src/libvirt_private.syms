@@ -2320,6 +2320,10 @@ virRandomGenerateWWN;
 virRandomInt;
 
 
+# util/virresctrl.h
+virResCtrlAvailable;
+virResCtrlInit;
+
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;
 virRotatingFileReaderFree;
