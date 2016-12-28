@@ -182,6 +182,7 @@ test_programs = virshtest sockettest \
 	virlockspacetest \
 	virlogtest \
 	virrotatingfiletest \
+	virresctrltest \
 	virschematest \
 	virstringtest \
 	virportallocatortest \
@@ -1184,6 +1185,10 @@ virrotatingfiletest_SOURCES = \
 	virrotatingfiletest.c testutils.h testutils.c
 virrotatingfiletest_CFLAGS = $(AM_CFLAGS)
 virrotatingfiletest_LDADD = $(LDADDS)
+
+virresctrltest_SOURCES = \
+	virresctrltest.c testutils.h testutils.c
+virresctrltest_LDADD = $(LDADDS)
 
 if WITH_LINUX
 virusbtest_SOURCES = \

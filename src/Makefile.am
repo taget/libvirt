@@ -162,6 +162,7 @@ UTIL_SOURCES =							\
 		util/virprocess.c util/virprocess.h		\
 		util/virqemu.c util/virqemu.h			\
 		util/virrandom.h util/virrandom.c		\
+		util/virresctrl.h util/virresctrl.c		\
 		util/virrotatingfile.h util/virrotatingfile.c   \
 		util/virscsi.c util/virscsi.h			\
 		util/virscsivhost.c util/virscsivhost.h		\
