@@ -530,7 +530,8 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
                                unsigned int *nodes,
                                unsigned int *sockets,
                                unsigned int *cores,
-                               unsigned int *threads)
+                               unsigned int *threads,
+                               unsigned int *l3_cache)
 {
     virBitmapPtr present_cpus_map = NULL;
     virBitmapPtr online_cpus_map = NULL;
@@ -546,7 +547,7 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
     int direrr;
 
     *mhz = 0;
-    *cpus = *nodes = *sockets = *cores = *threads = 0;
+    *cpus = *nodes = *sockets = *cores = *threads = *l3_cache = 0;
 
     /* Start with parsing CPU clock speed from /proc/cpuinfo */
     while (fgets(line, sizeof(line), cpuinfo) != NULL) {
@@ -570,6 +571,24 @@ virHostCPUGetInfoPopulateLinux(FILE *cpuinfo,
                     /* Accept trailing fractional part.  */
                     (*p == '\0' || *p == '.' || c_isspace(*p)))
                     *mhz = ui;
+            }
+            if (STRPREFIX(buf, "cache size")) {
+                char *p;
+                unsigned int ui;
+                buf += 10;
+
+                while (*buf && c_isspace(*buf))
+                    buf++;
+
+                if (*buf != ':' || !buf[1]) {
+                    virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                            _("parsing cache size from cpuinfo"));
+                    goto cleanup;
+                }
+
+                if (virStrToLong_ui(buf+1, &p, 10, &ui) == 0 &&
+                        *(p+1)=='K' && *(p+2)=='B')
+                    *l3_cache = ui;
             }
         } else if (ARCH_IS_PPC(arch)) {
             char *buf = line;
@@ -960,7 +979,8 @@ virHostCPUGetInfo(virArch hostarch ATTRIBUTE_UNUSED,
                   unsigned int *nodes ATTRIBUTE_UNUSED,
                   unsigned int *sockets ATTRIBUTE_UNUSED,
                   unsigned int *cores ATTRIBUTE_UNUSED,
-                  unsigned int *threads ATTRIBUTE_UNUSED)
+                  unsigned int *threads ATTRIBUTE_UNUSED,
+                  unsigned int *l3_cache ATTRIBUTE_UNUSED)
 {
 #ifdef __linux__
     int ret = -1;
@@ -974,7 +994,8 @@ virHostCPUGetInfo(virArch hostarch ATTRIBUTE_UNUSED,
 
     ret = virHostCPUGetInfoPopulateLinux(cpuinfo, hostarch,
                                          cpus, mhz, nodes,
-                                         sockets, cores, threads);
+                                         sockets, cores, threads,
+                                         l3_cache);
     if (ret < 0)
         goto cleanup;
 

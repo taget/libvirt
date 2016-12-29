@@ -671,6 +671,7 @@ cmdNodeinfo(vshControl *ctl, const vshCmd *cmd ATTRIBUTE_UNUSED)
     vshPrint(ctl, "%-20s %d\n", _("Thread(s) per core:"), info.threads);
     vshPrint(ctl, "%-20s %d\n", _("NUMA cell(s):"), info.nodes);
     vshPrint(ctl, "%-20s %lu KiB\n", _("Memory size:"), info.memory);
+    vshPrint(ctl, "%-20s %d KiB\n", _("L3 cache size:"), info.l3_cache);
 
     return true;
 }

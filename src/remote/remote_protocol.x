@@ -489,6 +489,7 @@ struct remote_node_get_info_ret { /* insert@1 */
     int sockets;
     int cores;
     int threads;
+    int l3_cache;
 };
 
 struct remote_connect_get_capabilities_ret {

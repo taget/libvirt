@@ -152,7 +152,8 @@ nodeGetInfo(virNodeInfoPtr nodeinfo)
     if (virHostCPUGetInfo(hostarch,
                           &nodeinfo->cpus, &nodeinfo->mhz,
                           &nodeinfo->nodes, &nodeinfo->sockets,
-                          &nodeinfo->cores, &nodeinfo->threads) < 0)
+                          &nodeinfo->cores, &nodeinfo->threads,
+                          &nodeinfo->l3_cache) < 0)
         return -1;
 
     return 0;
