@@ -1034,3 +1034,65 @@ virResCtrlGet(int type)
 {
     return &resctrlall[type];
 }
+
+int virResCtrlCacheGetStats(virNodeCacheStatsPtr params,
+                            int *nparams,
+                            unsigned int flags)
+{
+    virCheckFlags(0, -1);
+    size_t i, j, k;
+    char *value;
+    int rc = -1;
+    int lockfd;
+
+    if (*nparams == 0) {
+        for (i = 0; i < VIR_RDT_RESOURCE_LAST; i++) {
+            if (VIR_RESCTRL_ENABLED(i))
+                *nparams += resctrlall[i].num_banks;
+        }
+    }
+    if (params == NULL)
+        return 0;
+
+    if ((lockfd = open(RESCTRL_DIR, O_RDONLY)) < 0)
+        goto cleanup;
+
+    if (VIR_RESCTRL_LOCK(lockfd, LOCK_SH) < 0) {
+        virReportSystemError(errno, _("Unable to lock '%s'"), RESCTRL_DIR);
+        goto cleanup;
+    }
+    if (virResCtrlScan() < 0) {
+        VIR_ERROR(_("Failed to scan resctrl domain dir"));
+        goto cleanup;
+    }
+
+    virResCtrlRefreshSchemata();
+
+    if ((rc = virResCtrlFlushDomainToSysfs(domainall.domains)) < 0)
+        goto cleanup;
+
+    k = 0;
+
+    for (i = 0; i < VIR_RDT_RESOURCE_LAST; i++) {
+        if (VIR_RESCTRL_ENABLED(i)) {
+            for (j = 0; j < resctrlall[i].num_banks; j++) {
+
+                if (virAsprintf(&value, "%s.%zu",
+                                resctrlall[i].name, j) < 0)
+                    goto cleanup;
+
+                if (virStrcpyStatic((&params[k])->field, value) == NULL)
+                    goto cleanup;
+
+                (&params[k++])->value = resctrlall[i].cache_banks[j].cache_left;
+            }
+        }
+    }
+
+    rc = 0;
+
+ cleanup:
+    VIR_FREE(value);
+    VIR_RESCTRL_UNLOCK(lockfd);
+    return rc;
+}

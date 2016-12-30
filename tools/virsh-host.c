@@ -946,6 +946,49 @@ cmdNodeMemStats(vshControl *ctl, const vshCmd *cmd)
     VIR_FREE(params);
     return ret;
 }
+/* "nodecachestats" command
+ */
+static const vshCmdInfo info_nodecachestats[] = {
+    {.name = "help",
+     .data = N_("Prints cache stats of the node.")
+    },
+    {.name = "desc",
+     .data = N_("Returns cache stats of the node, in kilobytes.")
+    },
+    {.name = NULL}
+};
+
+static bool
+cmdNodeCacheStats(vshControl *ctl, const vshCmd *cmd ATTRIBUTE_UNUSED)
+{
+    virshControlPtr priv = ctl->privData;
+    virNodeCacheStatsPtr params;
+    int nparams = 0;
+    size_t i;
+    bool ret = false;
+
+    if (virNodeGetCacheStats(priv->conn, NULL, &nparams, 0) != 0) {
+        vshError(ctl, "%s",
+                 _("Unable to get number of cache stats"));
+        return false;
+    }
+    if (nparams == 0) {
+        /* nothing to output */
+        return true;
+    }
+
+    params = vshCalloc(ctl, nparams, sizeof(*params));
+    if (virNodeGetCacheStats(priv->conn, params, &nparams, 0) != 0) {
+        vshError(ctl, "%s", _("Unable to get node cache stats"));
+        goto cleanup;
+    }
+
+    for (i = 0; i < nparams; i++)
+        vshPrint(ctl, "%s: %llu KiB\n", params[i].field, params[i].value);
+
+ cleanup:
+    return ret;
+}
 
 /*
  * "nodesuspend" command
@@ -1453,6 +1496,12 @@ const vshCmdDef hostAndHypervisorCmds[] = {
      .handler = cmdNodeMemStats,
      .opts = opts_node_memstats,
      .info = info_nodememstats,
+     .flags = 0
+    },
+    {.name = "nodecachestats",
+     .handler = cmdNodeCacheStats,
+     .opts = NULL,
+     .info = info_nodecachestats,
      .flags = 0
     },
     {.name = "nodesuspend",

@@ -80,9 +80,17 @@ struct _virResCtrl {
 };
 
 bool virResCtrlAvailable(void);
+
 int virResCtrlInit(void);
+
 virResCtrlPtr virResCtrlGet(int);
+
 int virResCtrlSetCacheBanks(virDomainCachetunePtr,
         unsigned char *, pid_t *, int);
+
 int virResCtrlUpdate(unsigned char *);
+
+int virResCtrlCacheGetStats(virNodeCacheStatsPtr params,
+                            int *nparams,
+                            unsigned int flags);
 #endif
