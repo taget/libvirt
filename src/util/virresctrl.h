@@ -114,4 +114,7 @@ struct _virResCtrl {
 bool virResCtrlAvailable(void);
 int virResCtrlInit(void);
 virResCtrlPtr virGetResCtrl(int);
+int virResctrlCacheGetStats(virNodeCacheStatsPtr params,
+                            int *nparams,
+                            unsigned int flags);
 #endif

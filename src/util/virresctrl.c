@@ -447,3 +447,41 @@ bool virResCtrlAvailable(void) {
 virResCtrlPtr virGetResCtrl(int type) {
     return &ResCtrlAll[type];
 }
+
+int virResctrlCacheGetStats(virNodeCacheStatsPtr params,
+                            int *nparams,
+                            unsigned int flags)
+{
+    virCheckFlags(0, -1);
+    int i, j, k;
+    char resource_header [10];
+
+    if(*nparams == 0) {
+        for ( i = 0; i < RDT_NUM_RESOURCES; i ++) {
+            if( ResCtrlAll[i].enabled ) {
+                *nparams += ResCtrlAll[i].num_sockets;
+            }
+        }
+    }
+    if ( params == NULL )
+        return 0;
+
+    k = 0;
+
+    for ( i = 0; i < RDT_NUM_RESOURCES; i ++) {
+        if( ResCtrlAll[i].enabled ) {
+            for ( j = 0; j < ResCtrlAll[i].num_sockets; j ++)
+            {
+                snprintf(resource_header, sizeof(resource_header), "%s.%d ", ResCtrlAll[i].name, j);
+                if (virStrcpyStatic((&params[k])->field, resource_header) == NULL) {
+                    virReportError(VIR_ERR_INTERNAL_ERROR,
+                           _("Field '%s' too long for destination"),
+                           resource_header);
+                    return -1;
+                }
+                (&params[k++])->value = ResCtrlAll[i].cache_left[j];
+            }
+        }
+    }
+    return 0;
+}

@@ -18482,6 +18482,17 @@ qemuNodeGetCPUStats(virConnectPtr conn,
     return virHostCPUGetStats(cpuNum, params, nparams, flags);
 }
 
+static int
+qemuNodeGetCacheStats(virConnectPtr conn,
+                    virNodeCacheStatsPtr params,
+                    int *nparams,
+                    unsigned int flags)
+{
+    VIR_DEBUG("conn=%p, params=%p, nparams=%d, flags=%x",
+              conn, params, nparams, flags);
+    // TODO(eliqiao): Add acl checking here
+    return virResctrlCacheGetStats(params, nparams, flags);
+}
 
 static int
 qemuNodeGetMemoryStats(virConnectPtr conn,
@@ -20515,6 +20526,7 @@ static virHypervisorDriver qemuHypervisorDriver = {
     .domainMemoryPeek = qemuDomainMemoryPeek, /* 0.4.4 */
     .domainGetBlockInfo = qemuDomainGetBlockInfo, /* 0.8.1 */
     .nodeGetCPUStats = qemuNodeGetCPUStats, /* 0.9.3 */
+    .nodeGetCacheStats = qemuNodeGetCacheStats, /* 3.0.0 */
     .nodeGetMemoryStats = qemuNodeGetMemoryStats, /* 0.9.3 */
     .nodeGetCellsFreeMemory = qemuNodeGetCellsFreeMemory, /* 0.4.4 */
     .nodeGetFreeMemory = qemuNodeGetFreeMemory, /* 0.4.4 */
