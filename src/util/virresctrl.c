@@ -121,6 +121,7 @@ static int virBit_Is_1(int bits)
     return ret;
 }
 
+/*
 static int virResCtrlAddTask(const char *domain, const char *pid)
 {
     int rc = 0;
@@ -132,7 +133,7 @@ static int virResCtrlAddTask(const char *domain, const char *pid)
     if (!virFileExists(path)) {
         return -1;
     }
-    /* Append pid to tasks file*/
+    // Append pid to tasks file
     if ((writefd = open(path, O_WRONLY | O_APPEND, S_IRUSR | S_IWUSR)) < 0) {
         rc = -2;
         goto cleanup;
@@ -147,6 +148,8 @@ cleanup:
     VIR_FORCE_CLOSE(writefd);
     return rc;
 }
+
+*/
 
 /* Return pointer of  and ncount of schemata*/
 static virResSchemataPtr virParseSchemata(const char* schemata, int *ncount)
@@ -404,7 +407,7 @@ static int virResCtrlGetConfig(int type)
 
     ResCtrlAll[type].enabled = true;
 
-    printf("add tasks = %d\n", virResCtrlAddTask("p", "88879"));
+    //printf("add tasks = %d\n", virResCtrlAddTask("p", "88879"));
 
     printf("%d\n", virBit_Is_1(1));
     return ret;
@@ -439,4 +442,8 @@ bool virResCtrlAvailable(void) {
     if (!virFileExists(RESCTRL_INFO_DIR))
         return false;
     return true;
+}
+
+virResCtrlPtr virGetResCtrl(int type) {
+    return &ResCtrlAll[type];
 }

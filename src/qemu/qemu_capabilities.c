@@ -45,6 +45,7 @@
 #include "qemu_domain.h"
 #define __QEMU_CAPSRIV_H_ALLOW__
 #include "qemu_capspriv.h"
+#include "virresctrl.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1093,6 +1094,31 @@ virQEMUCapsInitCPU(virCapsPtr caps,
     goto cleanup;
 }
 
+static int
+virQEMUCapsInitResCtrl(virCapsPtr caps)
+{
+    int i;
+    caps->host.nresctrl = 0;
+    virResCtrlPtr resctrl;
+    virCapsHostResCtrlPtr res;
+
+    for( i = 0 ; i < RDT_NUM_RESOURCES; i++ ) {
+       resctrl = virGetResCtrl(i);
+       if (resctrl->enabled) {
+           if (VIR_RESIZE_N(caps->host.resCtrl, caps->host.nresctrl_max,
+                     caps->host.nresctrl, 1) < 0)
+               continue;
+
+           if (VIR_ALLOC(res) < 0)
+               continue;
+           res->resource_name = resctrl->name;
+           res->cache_size = resctrl->cache_left[0];
+           res->cache_unit = res->cache_size / resctrl->cbm_len;
+           caps->host.resCtrl[caps->host.nresctrl++] = res;
+       }
+    }
+    return 0;
+}
 
 static int
 virQEMUCapsInitPages(virCapsPtr caps)
@@ -1138,6 +1164,9 @@ virCapsPtr virQEMUCapsInit(virQEMUCapsCachePtr cache)
 
     if (virQEMUCapsInitCPU(caps, hostarch) < 0)
         VIR_WARN("Failed to get host CPU");
+
+    if (virQEMUCapsInitResCtrl(caps) < 0)
+        VIR_WARN("Failed to get host resCtrl");
 
     /* Add the power management features of the host */
     if (virNodeSuspendGetTargetMask(&caps->host.powerMgmt) < 0)

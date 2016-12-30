@@ -224,6 +224,7 @@ virCapabilitiesDispose(void *object)
     VIR_FREE(caps->host.netprefix);
     VIR_FREE(caps->host.pagesSize);
     virCPUDefFree(caps->host.cpu);
+    VIR_FREE(caps->host.resCtrl);
 }
 
 /**
@@ -888,6 +889,16 @@ virCapabilitiesFormatXML(virCapsPtr caps)
     for (i = 0; i < caps->host.nPagesSize; i++) {
         virBufferAsprintf(&buf, "<pages unit='KiB' size='%u'/>\n",
                           caps->host.pagesSize[i]);
+    }
+
+    if (caps->host.nresctrl > 0 ) {
+        for (i = 0; i < caps->host.nresctrl; i++ ) {
+            virBufferAsprintf(&buf,
+                    "<resctrl name='%s' unit='KiB' cache_size='%llu' cache_unit='%d'/>\n",
+                    caps->host.resCtrl[i]->resource_name,
+                    caps->host.resCtrl[i]->cache_size,
+                    caps->host.resCtrl[i]->cache_unit);
+        }
     }
 
     virBufferAdjustIndent(&buf, -2);

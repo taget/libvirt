@@ -113,4 +113,5 @@ struct _virResCtrl {
 
 bool virResCtrlAvailable(void);
 int virResCtrlInit(void);
+virResCtrlPtr virGetResCtrl(int);
 #endif

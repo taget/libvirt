@@ -138,6 +138,14 @@ struct _virCapsHostSecModel {
     virCapsHostSecModelLabelPtr labels;
 };
 
+typedef struct _virCapsHostResCtrl virCapsHostResCtrl;
+typedef virCapsHostResCtrl *virCapsHostResCtrlPtr;
+struct _virCapsHostResCtrl {
+    const char* resource_name;
+    unsigned long long cache_size;
+    int cache_unit;
+};
+
 typedef struct _virCapsHost virCapsHost;
 typedef virCapsHost *virCapsHostPtr;
 struct _virCapsHost {
@@ -165,6 +173,10 @@ struct _virCapsHost {
     int nPagesSize;             /* size of pagesSize array */
     unsigned int *pagesSize;    /* page sizes support on the system */
     unsigned char host_uuid[VIR_UUID_BUFLEN];
+
+    size_t nresctrl;
+    size_t nresctrl_max;
+    virCapsHostResCtrlPtr *resCtrl;
 };
 
 typedef int (*virDomainDefNamespaceParse)(xmlDocPtr, xmlNodePtr,

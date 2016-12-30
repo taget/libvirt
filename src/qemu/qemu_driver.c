@@ -107,6 +107,7 @@
 #include "virnuma.h"
 #include "dirname.h"
 #include "network/bridge_driver.h"
+#include "virresctrl.h"
 
 #define VIR_FROM_THIS VIR_FROM_QEMU
 
@@ -840,6 +841,10 @@ qemuStateInitialize(bool privileged,
 
         run_uid = cfg->user;
         run_gid = cfg->group;
+    }
+
+    if(virResCtrlInit() < 0) {
+       VIR_WARN("false");
     }
 
     qemu_driver->qemuCapsCache = virQEMUCapsCacheNew(cfg->libDir,
