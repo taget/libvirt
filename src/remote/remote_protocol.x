@@ -121,6 +121,9 @@ const REMOTE_NODE_CPU_STATS_MAX = 16;
 /* Upper limit on list of node memory stats. */
 const REMOTE_NODE_MEMORY_STATS_MAX = 16;
 
+/* Upper limit on list of node cache stats */
+const REMOTE_NODE_CACHE_STATS_MAX = 16;
+
 /* Upper limit on list of block stats. */
 const REMOTE_DOMAIN_BLOCK_STATS_PARAMETERS_MAX = 16;
 
@@ -393,6 +396,11 @@ struct remote_node_get_memory_stats {
     unsigned hyper value;
 };
 
+struct remote_node_get_cache_stats {
+    remote_nonnull_string field;
+    unsigned hyper value;
+};
+
 struct remote_domain_disk_error {
     remote_nonnull_string disk;
     int error;
@@ -490,6 +498,16 @@ struct remote_node_get_info_ret { /* insert@1 */
     int cores;
     int threads;
     int l3_cache;
+};
+
+struct remote_node_get_cache_stats_args {
+    int nparams;
+    u_int flags;
+};
+
+struct remote_node_get_cache_stats_ret {
+    remote_node_get_cache_stats params<REMOTE_NODE_CACHE_STATS_MAX>;
+    int nparams;
 };
 
 struct remote_connect_get_capabilities_ret {
@@ -5953,5 +5971,11 @@ enum remote_procedure {
      * @priority: high
      * @acl: storage_vol:read
      */
-    REMOTE_PROC_STORAGE_VOL_GET_INFO_FLAGS = 378
+    REMOTE_PROC_STORAGE_VOL_GET_INFO_FLAGS = 378,
+
+    /**
+     * @generate: none
+     * @acl: none
+    */
+    REMOTE_PROC_NODE_GET_CACHE_STATS = 379
 };
