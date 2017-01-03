@@ -751,6 +751,7 @@ LIBVIRT_3.0.0 {
         virStorageVolGetInfoFlags;
         virConnectSecretEventRegisterAny;
         virConnectSecretEventDeregisterAny;
+        virNodeGetCacheStats;
 } LIBVIRT_2.2.0;
 
 LIBVIRT_3.1.0 {

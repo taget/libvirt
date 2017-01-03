@@ -121,6 +121,9 @@ const REMOTE_NODE_CPU_STATS_MAX = 16;
 /* Upper limit on list of node memory stats. */
 const REMOTE_NODE_MEMORY_STATS_MAX = 16;
 
+/* Upper limit on list of node cache stats */
+const REMOTE_NODE_CACHE_STATS_MAX = 16;
+
 /* Upper limit on list of block stats. */
 const REMOTE_DOMAIN_BLOCK_STATS_PARAMETERS_MAX = 16;
 
@@ -394,6 +397,11 @@ struct remote_node_get_memory_stats {
     unsigned hyper value;
 };
 
+struct remote_node_get_cache_stats {
+    remote_nonnull_string field;
+    unsigned hyper value;
+};
+
 struct remote_domain_disk_error {
     remote_nonnull_string disk;
     int error;
@@ -490,6 +498,16 @@ struct remote_node_get_info_ret { /* insert@1 */
     int sockets;
     int cores;
     int threads;
+};
+
+struct remote_node_get_cache_stats_args {
+    int nparams;
+    u_int flags;
+};
+
+struct remote_node_get_cache_stats_ret {
+    remote_node_get_cache_stats params<REMOTE_NODE_CACHE_STATS_MAX>;
+    int nparams;
 };
 
 struct remote_connect_get_capabilities_ret {
@@ -6033,5 +6051,10 @@ enum remote_procedure {
      * @acl: domain:save:!VIR_DOMAIN_AFFECT_CONFIG|VIR_DOMAIN_AFFECT_LIVE
      * @acl: domain:save:VIR_DOMAIN_AFFECT_CONFIG
      */
-    REMOTE_PROC_DOMAIN_SET_VCPU = 384
+    REMOTE_PROC_DOMAIN_SET_VCPU = 384,
+    /**
+     * @generate: none
+     * @acl: connect:read
+    */
+    REMOTE_PROC_NODE_GET_CACHE_STATS = 385
 };

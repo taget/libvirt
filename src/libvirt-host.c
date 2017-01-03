@@ -679,6 +679,47 @@ virNodeSuspendForDuration(virConnectPtr conn,
     return -1;
 }
 
+/*
+ * virNodeGetCacheStats:
+ * @conn: pointer to the hypervisor connection
+ * @params: pointer to memory parameter object
+ *          (return value, allocated by the caller)
+ * @nparams: pointer to number of memory parameters; input and output
+ * @flags: extra flags; not used yet, so callers should always pass 0
+ *
+ * Get all node cache usage stats.
+ *
+ * Returns 0 in case of success, and -1 in case of failure.
+ *
+*/
+
+int virNodeGetCacheStats(virConnectPtr conn,
+                         virNodeCacheStatsPtr params,
+                         int *nparams,
+                         unsigned int flags)
+{
+    VIR_DEBUG("conn=%p, params=%p, nparams=%d, flags=%x",
+               conn, params, nparams ? *nparams : -1, flags);
+    virResetLastError();
+
+    virCheckConnectReturn(conn, -1);
+    virCheckNonNullArgGoto(nparams, error);
+    virCheckNonNegativeArgGoto(*nparams, error);
+
+    if (conn->driver->nodeGetCacheStats) {
+        int ret;
+        ret = conn->driver->nodeGetCacheStats(conn, params, nparams, flags);
+        if (ret < 0)
+            goto error;
+        return ret;
+    }
+    virReportUnsupportedError();
+
+ error:
+    virDispatchError(conn);
+    return -1;
+
+}
 
 /*
  * virNodeGetMemoryParameters:

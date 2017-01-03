@@ -578,6 +578,12 @@ typedef int
                             unsigned int flags);
 
 typedef int
+(*virDrvNodeGetCacheStats)(virConnectPtr conn,
+                           virNodeCacheStatsPtr params,
+                           int *nparams,
+                           unsigned int flags);
+
+typedef int
 (*virDrvNodeGetCellsFreeMemory)(virConnectPtr conn,
                                 unsigned long long *freeMems,
                                 int startCell,
@@ -1458,6 +1464,7 @@ struct _virHypervisorDriver {
     virDrvConnectSetKeepAlive connectSetKeepAlive;
     virDrvConnectIsAlive connectIsAlive;
     virDrvNodeSuspendForDuration nodeSuspendForDuration;
+    virDrvNodeGetCacheStats nodeGetCacheStats;
     virDrvDomainGetPerfEvents domainGetPerfEvents;
     virDrvDomainSetPerfEvents domainSetPerfEvents;
     virDrvDomainSetBlockIoTune domainSetBlockIoTune;

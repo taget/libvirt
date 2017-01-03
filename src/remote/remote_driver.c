@@ -1708,6 +1708,57 @@ remoteNodeGetCellsFreeMemory(virConnectPtr conn,
 }
 
 static int
+remoteNodeGetCacheStats(virConnectPtr conn,
+                        virNodeCacheStatsPtr params,
+                        int *nparams,
+                        unsigned int flags)
+{
+    int rv = -1;
+    size_t i;
+    remote_node_get_cache_stats_args args;
+    remote_node_get_cache_stats_ret ret;
+    struct private_data *priv = conn->privateData;
+
+    remoteDriverLock(priv);
+
+    args.nparams = *nparams;
+    args.flags = flags;
+
+    memset(&ret, 0, sizeof(ret));
+    if (call(conn, priv, 0, REMOTE_PROC_NODE_GET_CACHE_STATS,
+             (xdrproc_t) xdr_remote_node_get_cache_stats_args, (char *) &args,
+             (xdrproc_t) xdr_remote_node_get_cache_stats_ret, (char *) &ret) == -1)
+        goto done;
+
+    if (*nparams == 0) {
+        *nparams = ret.nparams;
+        rv = 0;
+        goto cleanup;
+    }
+
+    *nparams = ret.params.params_len;
+
+    /* Deserialise the result. */
+    for (i = 0; i < *nparams; ++i) {
+        if (virStrcpyStatic(params[i].field, ret.params.params_val[i].field) == NULL) {
+            virReportError(VIR_ERR_INTERNAL_ERROR,
+                           _("Stats %s too big for destination"),
+                           ret.params.params_val[i].field);
+            goto cleanup;
+        }
+        params[i].value = ret.params.params_val[i].value;
+    }
+
+    rv = 0;
+
+ cleanup:
+    xdr_free((xdrproc_t) xdr_remote_node_get_cache_stats_ret, (char *) &ret);
+ done:
+    remoteDriverUnlock(priv);
+    return rv;
+}
+
+static int
 remoteConnectListDomains(virConnectPtr conn, int *ids, int maxids)
 {
     int rv = -1;
@@ -8291,6 +8342,7 @@ static virHypervisorDriver hypervisor_driver = {
     .nodeGetMemoryStats = remoteNodeGetMemoryStats, /* 0.9.3 */
     .nodeGetCellsFreeMemory = remoteNodeGetCellsFreeMemory, /* 0.3.3 */
     .nodeGetFreeMemory = remoteNodeGetFreeMemory, /* 0.3.3 */
+    .nodeGetCacheStats = remoteNodeGetCacheStats, /* 3.0.0 */
     .connectDomainEventRegister = remoteConnectDomainEventRegister, /* 0.5.0 */
     .connectDomainEventDeregister = remoteConnectDomainEventDeregister, /* 0.5.0 */
     .domainMigratePrepare2 = remoteDomainMigratePrepare2, /* 0.5.0 */

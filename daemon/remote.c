@@ -7079,3 +7079,70 @@ remoteSerializeDomainDiskErrors(virDomainDiskErrorPtr errors,
     }
     return -1;
 }
+
+ static int
+remoteDispatchNodeGetCacheStats(virNetServerPtr server ATTRIBUTE_UNUSED,
+                                virNetServerClientPtr client ATTRIBUTE_UNUSED,
+                                virNetMessagePtr msg ATTRIBUTE_UNUSED,
+                                virNetMessageErrorPtr rerr,
+                                remote_node_get_cache_stats_args *args,
+                                remote_node_get_cache_stats_ret *ret)
+{
+    virNodeCacheStatsPtr params = NULL;
+    size_t i;
+    int nparams = 0;
+    unsigned int flags;
+    int rv = -1;
+    struct daemonClientPrivate *priv =
+        virNetServerClientGetPrivateData(client);
+
+    if (!priv->conn) {
+        virReportError(VIR_ERR_INTERNAL_ERROR, "%s", _("connection not open"));
+        goto cleanup;
+    }
+
+    flags = args->flags;
+
+    if (args->nparams && VIR_ALLOC_N(params, args->nparams) < 0)
+        goto cleanup;
+    nparams = args->nparams;
+
+    if (virNodeGetCacheStats(priv->conn, params, &nparams, flags) < 0)
+        goto cleanup;
+
+    /* In this case, we need to send back the number of stats
+     * supported
+     */
+    if (args->nparams == 0) {
+        ret->nparams = nparams;
+        goto success;
+    }
+
+    /* Serialise the memory parameters. */
+    ret->params.params_len = nparams;
+    if (VIR_ALLOC_N(ret->params.params_val, nparams) < 0)
+        goto cleanup;
+
+    for (i = 0; i < nparams; ++i) {
+        /* remoteDispatchClientRequest will free this: */
+        if (VIR_STRDUP(ret->params.params_val[i].field, params[i].field) < 0)
+            goto cleanup;
+
+        ret->params.params_val[i].value = params[i].value;
+    }
+
+ success:
+    rv = 0;
+
+ cleanup:
+    if (rv < 0) {
+        virNetMessageSaveError(rerr);
+        if (ret->params.params_val) {
+            for (i = 0; i < nparams; i++)
+                VIR_FREE(ret->params.params_val[i].field);
+            VIR_FREE(ret->params.params_val);
+        }
+    }
+    VIR_FREE(params);
+    return rv;
+}

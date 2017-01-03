@@ -94,6 +94,10 @@ struct remote_node_get_memory_stats {
         remote_nonnull_string      field;
         uint64_t                   value;
 };
+struct remote_node_get_cache_stats {
+        remote_nonnull_string      field;
+        uint64_t                   value;
+};
 struct remote_domain_disk_error {
         remote_nonnull_string      disk;
         int                        error;
@@ -2380,6 +2384,17 @@ struct remote_node_get_cpu_map_ret {
         u_int                      online;
         int                        ret;
 };
+struct remote_node_get_cache_stats_args {
+       int                         nparams;
+       u_int                       flags;
+};
+struct remote_node_get_cache_stats_ret {
+        struct {
+                u_int              paramms_len;
+                remote_node_get_cache_stats * params_val;
+        } params;
+        int                        nparams;
+};
 struct remote_domain_fstrim_args {
         remote_nonnull_domain      dom;
         remote_string              mountPoint;
@@ -3217,4 +3232,5 @@ enum remote_procedure {
         REMOTE_PROC_SECRET_EVENT_LIFECYCLE = 382,
         REMOTE_PROC_SECRET_EVENT_VALUE_CHANGED = 383,
         REMOTE_PROC_DOMAIN_SET_VCPU = 384,
+        REMOTE_PROC_NODE_GET_CACHE_STATS = 385,
 };

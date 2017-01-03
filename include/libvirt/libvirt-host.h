@@ -140,6 +140,32 @@ struct _virSecurityModel {
  */
 typedef virSecurityModel *virSecurityModelPtr;
 
+/**
+ * VIR_NODE_CACHE_STATS_FIELD_LENGTH:
+ *
+ * Macro providing the field length of virNodeCacheStats
+ */
+
+# define VIR_NODE_CACHE_STATS_FIELD_LENGTH 16
+
+/**
+ *
+ * virNodeCacheStats is all the cache stats on a host.
+ */
+
+typedef struct _virNodeCacheStats virNodeCacheStats;
+
+struct _virNodeCacheStats {
+    char field[VIR_NODE_CACHE_STATS_FIELD_LENGTH];
+    unsigned long long value;
+};
+
+/**
+ * a virNodeCacheStatsPtr is a pointer to a virNodeCacheStats.
+ */
+
+typedef virNodeCacheStats *virNodeCacheStatsPtr;
+
 
 /* data types related to virNodePtr */
 
@@ -602,6 +628,12 @@ int                     virNodeSuspendForDuration (virConnectPtr conn,
                                                    unsigned int target,
                                                    unsigned long long duration,
                                                    unsigned int flags);
+
+int                     virNodeGetCacheStats (virConnectPtr conn,
+                                              virNodeCacheStatsPtr params,
+                                              int *nparams,
+                                              unsigned int flags);
+
 
 /*
  * NUMA support
