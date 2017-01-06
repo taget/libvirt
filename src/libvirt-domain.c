@@ -10501,6 +10501,101 @@ virDomainGetBlockIoTune(virDomainPtr dom,
     return -1;
 }
 
+/**
+ * virDomainSetCacheTune:
+ * @domain: a domain object
+ * @params: pointer to cache tune object
+ * @nparams: number of cache tune object
+ * @flags: bitwise-OR of virDomainModificationImpact
+ *
+ * Set unit count for a specified cache resource.
+ * care about. The @params should contain any subset of
+ * VIR_DOMAIN_CACHE_TUNE_ macros.
+ *
+ * Returns -1 in case of error, 0 in case of success.
+ */
+int virDomainSetCacheTune(virDomainPtr domain,
+                          virTypedParameterPtr params,
+                          int nparams,
+                          unsigned int flags)
+{
+    virConnectPtr conn;
+
+    VIR_DOMAIN_DEBUG(domain, "params=%p, nparams=%d flags=%x",
+                     params, nparams, flags);
+    VIR_TYPED_PARAMS_DEBUG(params, nparams);
+
+    virResetLastError();
+
+    virCheckDomainReturn(domain, -1);
+    conn = domain->conn;
+
+    virCheckReadOnlyGoto(conn->flags, error);
+    virCheckNonNullArgGoto(params, error);
+    virCheckPositiveArgGoto(nparams, error);
+
+    if (virTypedParameterValidateSet(conn, params, nparams) < 0)
+        goto error;
+
+    if (conn->driver->domainSetCacheTune) {
+        int ret;
+        ret = conn->driver->domainSetCacheTune(domain, params,
+                                               nparams, flags);
+        if (ret < 0)
+            goto error;
+        return ret;
+    }
+
+    virReportUnsupportedError();
+
+ error:
+    virDispatchError(domain->conn);
+    return -1;
+}
+
+/**
+ * virDomainGetCacheTune:
+ * @domain: a domain object
+ * @params: where to store cache tune setting
+ * @nparams: number of items in @params
+ * @flags: bitwise-OR of virDomainModificationImpact
+ *
+ * Get all cache resource setting
+ *
+ * Returns -1 in case of failure, 0 in case of success.
+ */
+int virDomainGetCacheTune(virDomainPtr domain,
+                          virTypedParameterPtr *params,
+                          int *nparams,
+                          unsigned int flags)
+{
+    virConnectPtr conn;
+
+    VIR_DOMAIN_DEBUG(domain, "params=%p, nparams=%p flags=%x",
+                     params, nparams, flags);
+
+    virResetLastError();
+
+    virCheckDomainReturn(domain, -1);
+    virCheckNonNullArgGoto(params, error);
+    virCheckNonNullArgGoto(nparams, error);
+
+    conn = domain->conn;
+
+    if (conn->driver->domainGetCacheTune) {
+        int ret;
+        ret = conn->driver->domainGetCacheTune(domain, params,
+                                               nparams, flags);
+        if (ret < 0)
+            goto error;
+        return ret;
+    }
+    virReportUnsupportedError();
+
+ error:
+    virDispatchError(domain->conn);
+    return -1;
+}
 
 /**
  * virDomainGetCPUStats:

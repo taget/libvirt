@@ -1046,6 +1046,18 @@ typedef int
                               unsigned int flags);
 
 typedef int
+(*virDrvDomainGetCacheTune)(virDomainPtr dom,
+                             virTypedParameterPtr *params,
+                             int *nparams,
+                             unsigned int flags);
+
+typedef int
+(*virDrvDomainSetCacheTune)(virDomainPtr dom,
+                             virTypedParameterPtr params,
+                             int nparams,
+                             unsigned int flags);
+
+typedef int
 (*virDrvDomainShutdownFlags)(virDomainPtr domain,
                              unsigned int flags);
 
@@ -1463,6 +1475,8 @@ struct _virHypervisorDriver {
     virDrvDomainSetPerfEvents domainSetPerfEvents;
     virDrvDomainSetBlockIoTune domainSetBlockIoTune;
     virDrvDomainGetBlockIoTune domainGetBlockIoTune;
+    virDrvDomainSetCacheTune domainSetCacheTune;
+    virDrvDomainGetCacheTune domainGetCacheTune;
     virDrvDomainGetCPUStats domainGetCPUStats;
     virDrvDomainGetDiskErrors domainGetDiskErrors;
     virDrvDomainSetMetadata domainSetMetadata;

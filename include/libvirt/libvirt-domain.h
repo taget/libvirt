@@ -2572,6 +2572,42 @@ virDomainGetBlockIoTune(virDomainPtr dom,
                         unsigned int flags);
 
 /**
+ * VIR_DOMAIN_CACHE_TUNE_L3_UNIT_COUNT:
+ * Macro for the cache tune for level 3 cache.
+ */
+# define VIR_DOMAIN_CACHE_TUNE_L3_UNIT_COUNT "l3.count"
+
+/**
+ * VIR_DOMAIN_CACHE_TUNE_L3_DATA_UNIT_COUNT:
+ * Macro for the cache tune for level 3 data cache.
+ */
+# define VIR_DOMAIN_CACHE_TUNE_L3_DATA_UNIT_COUNT "l3data.count"
+
+/**
+ * VIR_DOMAIN_CACHE_TUNE_L3_CODE_UNIT_COUNT:
+ * Macro for the cache tune for level 3 code cache.
+ */
+# define VIR_DOMAIN_CACHE_TUNE_L3_CODE_UNIT_COUNT "l3code.count"
+
+/**
+ * VIR_DOMAIN_CACHE_TUNE_L2_UNIT_COUNT:
+ * Macro for the cache tune for level 2 cache.
+ */
+# define VIR_DOMAIN_CACHE_TUNE_L2_UNIT_COUNT "l2.count"
+
+int
+virDomainGetCacheTune(virDomainPtr dom,
+                      virTypedParameterPtr *params,
+                      int *nparams,
+                      unsigned int flags);
+
+int
+virDomainSetCacheTune(virDomainPtr dom,
+                      virTypedParameterPtr params,
+                      int nparams,
+                      unsigned int flags);
+
+/**
  * virDomainDiskErrorCode:
  *
  * Disk I/O error.

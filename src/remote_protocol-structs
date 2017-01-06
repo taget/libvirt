@@ -1022,6 +1022,24 @@ struct remote_domain_get_block_io_tune_ret {
         } params;
         int                        nparams;
 };
+struct remote_domain_set_cache_tune_args {
+        remote_nonnull_domain      dom;
+        struct {
+                u_int              params_len;
+                remote_typed_param * params_val;
+        } params;
+        u_int                      flags;
+};
+struct remote_domain_get_cache_tune_args {
+        remote_nonnull_domain      dom;
+        u_int                      flags;
+};
+struct remote_domain_set_cache_tune_ret {
+        struct {
+                u_int              params_len;
+                remote_typed_param * params_val;
+        } params;
+};
 struct remote_domain_get_cpu_stats_args {
         remote_nonnull_domain      dom;
         u_int                      nparams;
@@ -3195,4 +3213,6 @@ enum remote_procedure {
         REMOTE_PROC_NODE_DEVICE_EVENT_UPDATE = 377,
         REMOTE_PROC_STORAGE_VOL_GET_INFO_FLAGS = 378,
         REMOTE_PROC_NODE_GET_CACHE_STATS = 379,
+        REMOTE_PROC_DIMAIN_GET_CACHE_TUNE = 380,
+        REMOTE_PROC_DIMAIN_SET_CACHE_TUNE = 381,
 };

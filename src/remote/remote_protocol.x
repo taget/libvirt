@@ -1410,6 +1410,21 @@ struct remote_domain_get_block_io_tune_ret {
     int nparams;
 };
 
+struct remote_domain_set_cache_tune_args {
+    remote_nonnull_domain dom;
+    remote_typed_param params<REMOTE_NODE_CACHE_STATS_MAX>;
+    unsigned int flags;
+};
+
+struct remote_domain_get_cache_tune_args {
+    remote_nonnull_domain dom;
+    unsigned int flags;
+};
+
+struct remote_domain_get_cache_tune_ret {
+    remote_typed_param params<REMOTE_NODE_CACHE_STATS_MAX>;
+};
+
 struct remote_domain_get_cpu_stats_args {
     remote_nonnull_domain dom;
     unsigned int nparams;
@@ -5977,5 +5992,17 @@ enum remote_procedure {
      * @generate: none
      * @acl: none
     */
-    REMOTE_PROC_NODE_GET_CACHE_STATS = 379
+    REMOTE_PROC_NODE_GET_CACHE_STATS = 379,
+
+    /**
+     * @generate: none
+     * @acl: domain:read
+     */
+    REMOTE_PROC_DOMAIN_GET_CACHE_TUNE = 380,
+
+    /**
+     * @generate: both
+     * @acl: domain:write
+     */
+    REMOTE_PROC_DOMAIN_SET_CACHE_TUNE = 381
 };

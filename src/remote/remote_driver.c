@@ -2976,6 +2976,45 @@ static int remoteDomainGetBlockIoTune(virDomainPtr domain,
     return rv;
 }
 
+static int
+remoteDomainGetCacheTune(virDomainPtr domain,
+                         virTypedParameterPtr *params,
+                         int *nparams,
+                         unsigned int flags)
+{
+    int rv = -1;
+    remote_domain_get_cache_tune_args args;
+    remote_domain_get_cache_tune_ret ret;
+    struct private_data *priv = domain->conn->privateData;
+
+    remoteDriverLock(priv);
+
+    make_nonnull_domain(&args.dom, domain);
+    args.flags = flags;
+
+    memset(&ret, 0, sizeof(ret));
+    if (call(domain->conn, priv, 0, REMOTE_PROC_DOMAIN_GET_CACHE_TUNE,
+             (xdrproc_t) xdr_remote_domain_get_cache_tune_args, (char *) &args,
+             (xdrproc_t) xdr_remote_domain_get_cache_tune_ret, (char *) &ret) == -1)
+        goto done;
+
+    if (virTypedParamsDeserialize((virTypedParameterRemotePtr) ret.params.params_val,
+                                  ret.params.params_len,
+                                  REMOTE_NODE_CACHE_STATS_MAX,
+                                  params,
+                                  nparams) < 0)
+        goto cleanup;
+
+    rv = 0;
+
+ cleanup:
+    xdr_free((xdrproc_t) xdr_remote_domain_get_cache_tune_ret,
+             (char *) &ret);
+ done:
+    remoteDriverUnlock(priv);
+    return rv;
+}
+
 static int remoteDomainGetCPUStats(virDomainPtr domain,
                                    virTypedParameterPtr params,
                                    unsigned int nparams,
@@ -8257,6 +8296,8 @@ static virHypervisorDriver hypervisor_driver = {
     .nodeSuspendForDuration = remoteNodeSuspendForDuration, /* 0.9.8 */
     .domainSetBlockIoTune = remoteDomainSetBlockIoTune, /* 0.9.8 */
     .domainGetBlockIoTune = remoteDomainGetBlockIoTune, /* 0.9.8 */
+    .domainGetCacheTune = remoteDomainGetCacheTune, /* 3.0.0 */
+    .domainSetCacheTune = remoteDomainSetCacheTune, /* 3.0.0 */
     .domainSetNumaParameters = remoteDomainSetNumaParameters, /* 0.9.9 */
     .domainGetNumaParameters = remoteDomainGetNumaParameters, /* 0.9.9 */
     .domainGetCPUStats = remoteDomainGetCPUStats, /* 0.9.10 */
