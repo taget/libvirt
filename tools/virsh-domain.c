@@ -1653,6 +1653,100 @@ cmdBlkiotune(vshControl * ctl, const vshCmd * cmd)
 }
 
 
+/*
+ * cache tune
+ */
+static const vshCmdInfo info_cachetune[] = {
+    {.name = "help",
+     .data = N_("Set or query a block device I/O tuning parameters.")
+    },
+    {.name = "desc",
+     .data = N_("Set or query disk I/O parameters such as block throttling.")
+    },
+    {.name = NULL}
+};
+
+static const vshCmdOptDef opts_cachetune[] = {
+    VIRSH_COMMON_OPT_DOMAIN_FULL,
+    {.name = "l3.count",
+     .type = VSH_OT_INT,
+     .help = N_("l3 cache unit count")
+    },
+    {.name = "l3data.count",
+     .type = VSH_OT_INT,
+     .help = N_("l3 data cache unit count")
+    },
+    {.name = "l3code.count",
+     .type = VSH_OT_INT,
+     .help = N_("l3 code cache unit count")
+    },
+    VIRSH_COMMON_OPT_DOMAIN_CONFIG,
+    VIRSH_COMMON_OPT_DOMAIN_LIVE,
+    VIRSH_COMMON_OPT_DOMAIN_CURRENT,
+    {.name = NULL}
+};
+
+static bool
+cmdCachetune(vshControl *ctl, const vshCmd *cmd)
+{
+    virDomainPtr dom = NULL;
+    bool current = vshCommandOptBool(cmd, "current");
+    bool config = vshCommandOptBool(cmd, "config");
+    bool live = vshCommandOptBool(cmd, "live");
+    bool ret = false;
+    int nparams = 0;
+    int maxparams = 0;
+    int value;
+    int rv = 0;
+    size_t i;
+    unsigned int flags = VIR_DOMAIN_AFFECT_CURRENT;
+    virTypedParameterPtr params = NULL;
+
+    VSH_EXCLUSIVE_OPTIONS_VAR(current, live);
+    VSH_EXCLUSIVE_OPTIONS_VAR(current, config);
+
+    if (config)
+        flags |= VIR_DOMAIN_AFFECT_CONFIG;
+    if (live)
+        flags |= VIR_DOMAIN_AFFECT_LIVE;
+
+    if (!(dom = virshCommandOptDomain(ctl, cmd, NULL)))
+        goto cleanup;
+
+    if ((rv = vshCommandOptInt(ctl, cmd, "l3.count", &value)) < 0) {
+        goto cleanup;
+    } else if (rv > 0) {
+        if (virTypedParamsAddInt(&params, &nparams, &maxparams,
+                "l3.count",
+                value) < 0)
+        goto cleanup;
+    }
+
+    if (nparams == 0) {
+        if (virDomainGetCacheTune(dom, &params, &nparams, flags) != 0) {
+            vshError(ctl, "%s", _("Unable to get perf events"));
+            goto cleanup;
+        }
+        for(i = 0; i < nparams; i ++) {
+            char *str = vshGetTypedParamValue(ctl, &params[i]);
+            vshPrint(ctl, "%-15s: %s\n", params[i].field, str);
+            VIR_FREE(str);
+        }
+    } else if (nparams > 0 ){
+        if (virDomainSetCacheTune(dom, params, nparams, flags) != 0) {
+            goto cleanup;
+        }
+    }
+
+    ret = true;
+ cleanup:
+    virTypedParamsFree(params, nparams);
+    virDomainFree(dom);
+    return ret;
+}
+
+
+
 static void
 virshPrintJobProgress(const char *label, unsigned long long remaining,
                       unsigned long long total)
@@ -13912,5 +14006,12 @@ const vshCmdDef domManagementCmds[] = {
      .info = info_guestvcpus,
      .flags = 0
     },
+    {.name = "cachetune",
+     .handler = cmdCachetune,
+     .opts = opts_cachetune,
+     .info = info_cachetune,
+     .flags = 0
+    },
+
     {.name = NULL}
 };
