@@ -18484,11 +18484,11 @@ qemuNodeGetCPUStats(virConnectPtr conn,
 
 static int
 qemuNodeGetCacheStats(virConnectPtr conn,
-                    virNodeCacheStatsPtr params,
-                    int *nparams,
-                    unsigned int flags)
+                     virNodeCacheStatsPtr params,
+                     int *nparams,
+                     unsigned int flags)
 {
-    VIR_DEBUG("conn=%p, params=%p, nparams=%d, flags=%x",
+    VIR_DEBUG("conn=%p, params=%p, nparams=%p, flags=%x",
               conn, params, nparams, flags);
     // TODO(eliqiao): Add acl checking here
     return virResctrlCacheGetStats(params, nparams, flags);
@@ -20426,6 +20426,128 @@ qemuDomainSetGuestVcpus(virDomainPtr dom,
     return ret;
 }
 
+static int
+qemuDomainSetCacheTune(virDomainPtr dom,
+                       virTypedParameterPtr params,
+                       int nparams,
+                       unsigned int flags)
+{
+    VIR_DEBUG("dom=%p, params=%p, nparams=%d, flags=%x",
+              dom, params, nparams, flags);
+
+    int ret = -1;
+    int type;
+    size_t i;
+    virDomainDefPtr def;
+    virDomainDefPtr persistentDef;
+    virQEMUDriverPtr driver = dom->conn->privateData;
+    virDomainObjPtr vm = NULL;
+    virQEMUDriverConfigPtr cfg = NULL;
+    qemuDomainObjPrivatePtr priv;
+
+    virCheckFlags(VIR_DOMAIN_AFFECT_LIVE |
+                  VIR_DOMAIN_AFFECT_CONFIG, -1);
+
+    if (virTypedParamsValidate(params, nparams,
+                VIR_DOMAIN_CACHE_TUNE_L3_UNIT_COUNT, VIR_TYPED_PARAM_INT,
+                VIR_DOMAIN_CACHE_TUNE_L3_DATA_UNIT_COUNT, VIR_TYPED_PARAM_INT,
+                VIR_DOMAIN_CACHE_TUNE_L3_CODE_UNIT_COUNT, VIR_TYPED_PARAM_INT,
+                VIR_DOMAIN_CACHE_TUNE_L2_UNIT_COUNT, VIR_TYPED_PARAM_INT, NULL)
+            < 0)
+        return -1;
+
+    if (!(vm = qemuDomObjFromDomain(dom)))
+        return -1;
+    cfg = virQEMUDriverGetConfig(driver);
+    priv = vm->privateData;
+
+    if (virDomainSetCacheTuneEnsureACL(dom->conn, vm->def) < 0)
+        goto cleanup;
+
+    if (qemuDomainObjBeginJob(driver, vm, QEMU_JOB_MODIFY) < 0)
+        goto cleanup;
+
+    if (virDomainObjGetDefs(vm, flags, &def, &persistentDef) < 0)
+        goto endjob;
+
+    if (priv->cache == NULL)
+        goto endjob;
+
+    for ( i = 0 ; i < nparams; i ++) {
+        virTypedParameterPtr param = &params[i];
+        type = virCacheItemTypeFromString(param->field);
+        if (virCacheSetCount(priv->cache, type, param->value.i) < 0)
+            goto endjob;
+    }
+
+    ret = 0;
+
+ endjob:
+    qemuDomainObjEndJob(driver, vm);
+
+cleanup:
+    virDomainObjEndAPI(&vm);
+    return ret;
+}
+
+static int
+qemuDomainGetCacheTune(virDomainPtr dom,
+                       virTypedParameterPtr *params,
+                       int *nparams,
+                       unsigned int flags)
+{
+    VIR_DEBUG("dom=%p, params=%p, nparams=%p, flags=%x",
+              dom, params, nparams, flags);
+    int ret = -1;
+    virQEMUDriverPtr driver = dom->conn->privateData;
+    virDomainObjPtr vm = NULL;
+    qemuDomainObjPrivatePtr priv;
+    virTypedParameterPtr par = NULL;
+    int maxpar = 0;
+    int npar = 0;
+    size_t i;
+    virResCtrlPtr resctrl;
+
+    virCheckFlags(VIR_DOMAIN_AFFECT_LIVE |
+                  VIR_DOMAIN_AFFECT_CONFIG |
+                  VIR_TYPED_PARAM_STRING_OKAY, -1);
+
+    if (!(vm = qemuDomObjFromDomain(dom)))
+        goto cleanup;
+
+    if (virDomainGetCacheTuneEnsureACL(dom->conn, vm->def) < 0)
+        goto cleanup;
+
+    if (qemuDomainObjBeginJob(driver, vm, QEMU_JOB_QUERY) < 0)
+        goto cleanup;
+
+    if (virDomainObjUpdateModificationImpact(vm, &flags) < 0)
+        goto endjob;
+
+    priv = vm->privateData;
+
+    for (i = 0; i < RDT_NUM_RESOURCES; i++) {
+        resctrl = virGetResCtrl(i);
+        if(! resctrl->enabled)
+            continue;
+        if(virTypedParamsAddInt(&par, &npar, &maxpar, virCacheItemTypeToString(i),
+                    virCacheGetCount(priv->cache, i)) < 0)
+            goto endjob;
+    }
+    *params = par;
+    *nparams = npar;
+    par = NULL;
+    npar = 0;
+    ret = 0;
+
+endjob:
+    qemuDomainObjEndJob(driver, vm);
+
+cleanup:
+    virDomainObjEndAPI(&vm);
+    virTypedParamsFree(par, npar);
+    return ret;
+}
 
 static virHypervisorDriver qemuHypervisorDriver = {
     .name = QEMU_DRIVER_NAME,
@@ -20641,6 +20763,8 @@ static virHypervisorDriver qemuHypervisorDriver = {
     .domainMigrateStartPostCopy = qemuDomainMigrateStartPostCopy, /* 1.3.3 */
     .domainGetGuestVcpus = qemuDomainGetGuestVcpus, /* 2.0.0 */
     .domainSetGuestVcpus = qemuDomainSetGuestVcpus, /* 2.0.0 */
+    .domainSetCacheTune = qemuDomainSetCacheTune, /* 3.0.0 */
+    .domainGetCacheTune = qemuDomainGetCacheTune, /* 3.0.0 */
 };
 
 

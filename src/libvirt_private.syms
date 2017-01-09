@@ -2300,6 +2300,11 @@ virResCtrlAvailable;
 virResCtrlInit;
 virGetResCtrl;
 virResctrlCacheGetStats;
+virCacheItemTypeToString;
+virCacheItemTypeFromString;
+virCacheNew;
+virCacheGetCount;
+virCacheSetCount;
 
 
 # util/virrotatingfile.h

@@ -26,7 +26,6 @@
 
 # include "virutil.h"
 # include "virbitmap.h"
-# include "domain_conf.h"
 
 #define RESCTRL_DIR "/sys/fs/resctrl"
 #define RESCTRL_INFO_DIR "/sys/fs/resctrl/info"
@@ -43,8 +42,14 @@ enum {
     RDT_RESOURCE_L3CODE,
     RDT_RESOURCE_L2,
     /* Must be the last */
-    RDT_NUM_RESOURCES,
+    RDT_NUM_RESOURCES
 };
+
+VIR_ENUM_DECL(virCacheItem);
+
+/* Struct for cache allocation in a domain*/
+struct virCache;
+typedef struct virCache *virCachePtr;
 
 typedef struct _virResSchemata virResSchemata;
 typedef virResSchemata *virResSchemataPtr;
@@ -117,4 +122,7 @@ virResCtrlPtr virGetResCtrl(int);
 int virResctrlCacheGetStats(virNodeCacheStatsPtr params,
                             int *nparams,
                             unsigned int flags);
+virCachePtr virCacheNew(void);
+int virCacheGetCount(virCachePtr, int);
+int virCacheSetCount(virCachePtr, int, int);
 #endif

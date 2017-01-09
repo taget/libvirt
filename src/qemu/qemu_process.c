@@ -5570,6 +5570,9 @@ qemuProcessLaunch(virConnectPtr conn,
             goto cleanup;
     }
 
+    if(!(priv->cache = virCacheNew()))
+        goto cleanup;
+
     /* This must be done after cgroup placement to avoid resetting CPU
      * affinity */
     if (!vm->def->cputune.emulatorpin &&

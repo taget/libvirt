@@ -27,6 +27,7 @@
 # include "virthread.h"
 # include "vircgroup.h"
 # include "virperf.h"
+# include "virresctrl.h"
 # include "domain_addr.h"
 # include "domain_conf.h"
 # include "snapshot_conf.h"
@@ -220,6 +221,8 @@ struct _qemuDomainObjPrivate {
     virCgroupPtr cgroup;
 
     virPerfPtr perf;
+
+    virCachePtr cache;
 
     qemuDomainUnpluggingDevice unplug;
 

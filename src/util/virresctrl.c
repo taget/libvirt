@@ -54,6 +54,20 @@ do { \
     } \
 } while(0)
 
+VIR_ENUM_IMPL(virCacheItem, RDT_NUM_RESOURCES,
+        "l3.count", "l3data.count,", "l3code.count", "l2.count");
+
+struct _virCacheItem {
+    int type;
+    int unit_counts;
+};
+
+typedef struct _virCacheItem virCacheItem;
+typedef struct virCacheItem *virCacheItemPtr;
+
+struct virCache {
+    virCacheItem items[RDT_NUM_RESOURCES];
+};
 
 static virResCtrl ResCtrlAll[] = {
     {
@@ -483,5 +497,36 @@ int virResctrlCacheGetStats(virNodeCacheStatsPtr params,
             }
         }
     }
+    return 0;
+}
+
+virCachePtr virCacheNew(void)
+{
+    size_t i;
+    virCachePtr cache;
+
+    if (VIR_ALLOC(cache) < 0)
+        return NULL;
+
+    for (i = 0; i < RDT_NUM_RESOURCES; i++) {
+        cache->items[i].type = i;
+        cache->items[i].unit_counts = -1;
+    }
+
+    return cache;
+}
+
+int virCacheGetCount(virCachePtr cache, int type)
+{
+    if( cache == NULL )
+        return -1;
+    return cache->items[type].unit_counts;
+}
+
+int virCacheSetCount(virCachePtr cache, int type, int val)
+{
+    if( cache == NULL )
+        return -1;
+    cache->items[type].unit_counts = val;
     return 0;
 }
