@@ -60,25 +60,26 @@ static virResCtrl ResCtrlAll[] = {
     {
         .name = "L3",
         .domains = NULL,
-        .cache_level = 3,
+        .cache_level = "l3",
     },
     {
         .name = "L3DATA",
         .domains = NULL,
-        .cache_level = 3,
+        .cache_level = "l3",
     },
     {
         .name = "L3CODE",
         .domains = NULL,
-        .cache_level = 3,
+        .cache_level = "l3",
     },
     {
         .name = "L2",
         .domains = NULL,
-        .cache_level = 2,
+        .cache_level = "l2",
     },
 };
 
+/*
 static int DebugResCtrlAll(void) {
     int i,j,k;
     virResDomainPtr p;
@@ -111,6 +112,7 @@ static int DebugResCtrlAll(void) {
     }
    return 0;
 }
+*/
 
 /* Return pointer of  and ncount of schemata*/
 static virResSchemataPtr virParseSchemata(const char* schemata, int *ncount)
@@ -441,7 +443,6 @@ static int virResCtrlParseCPUCache(int type)
             if (virResCtrlGetCPUCache(i, index, &cache_size) < 0) {
                 return -1;
             }
-            printf("cache_size = %d\n", cache_size);
             ResCtrlAll[type].cache_size[s_id] = cache_size;
             ResCtrlAll[type].cache_min[s_id] = cache_size / ResCtrlAll[type].cbm_len;
         }
@@ -525,10 +526,11 @@ int virResCtrlInit(void) {
 }
 
 bool virResCtrlAvailable(void) {
-
-    virResCtrlInit();
-    DebugResCtrlAll();
     if (!virFileExists(RESCTRL_INFO_DIR))
         return false;
     return true;
+}
+
+virResCtrlPtr virResCtrlGet(int type) {
+    return &ResCtrlAll[type];
 }

@@ -105,7 +105,7 @@ struct _virResCtrl {
         int                     min_cbm_bits;
         virResDomainPtr         domains;
         int                     num_domains;
-        int                     cache_level;
+        const char*             cache_level;
         int                     num_sockets;
         int                     cache_size[MAX_CPU_SOCKET_NUM];
         int                     cache_left[MAX_CPU_SOCKET_NUM];
@@ -116,5 +116,5 @@ struct _virResCtrl {
 
 bool virResCtrlAvailable(void);
 int virResCtrlInit(void);
-
+virResCtrlPtr virResCtrlGet(int);
 #endif

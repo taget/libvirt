@@ -138,6 +138,17 @@ struct _virCapsHostSecModel {
     virCapsHostSecModelLabelPtr labels;
 };
 
+typedef struct _virCapsHostCacheBank virCapsHostCacheBank;
+typedef virCapsHostCacheBank *virCapsHostCacheBankPtr;
+struct _virCapsHostCacheBank {
+    unsigned int id;
+    char* type;
+    char* cpus;
+    unsigned long long size;
+    unsigned long long min;
+    char* scope;
+};
+
 typedef struct _virCapsHost virCapsHost;
 typedef virCapsHost *virCapsHostPtr;
 struct _virCapsHost {
@@ -159,6 +170,10 @@ struct _virCapsHost {
 
     size_t nsecModels;
     virCapsHostSecModelPtr secModels;
+
+    size_t ncachebank;
+    size_t ncachebank_max;
+    virCapsHostCacheBankPtr *cachebank;
 
     char *netprefix;
     virCPUDefPtr cpu;

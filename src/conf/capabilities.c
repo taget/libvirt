@@ -844,6 +844,30 @@ virCapabilitiesFormatNUMATopology(virBufferPtr buf,
     return 0;
 }
 
+static int
+virCapabilitiesFormatCache(virBufferPtr buf,
+                           size_t ncachebank,
+                           virCapsHostCacheBankPtr *cachebank)
+{
+    size_t i;
+
+    virBufferAddLit(buf, "<cache>\n");
+    virBufferAdjustIndent(buf, 2);
+
+    for( i = 0 ; i < ncachebank; i++) {
+        virBufferAsprintf(buf, "<bank id='%u' type='%s' size='%llu' unit='KiB' cpus='%s' min='%llu' scope='%s'/>\n",
+                cachebank[i]->id,
+                cachebank[i]->type,
+                cachebank[i]->size,
+                cachebank[i]->cpus,
+                cachebank[i]->min,
+                cachebank[i]->scope);
+    }
+    virBufferAdjustIndent(buf, -2);
+    virBufferAddLit(buf, "/<cache>\n");
+    return 0;
+}
+
 /**
  * virCapabilitiesFormatXML:
  * @caps: capabilities to format
@@ -930,6 +954,11 @@ virCapabilitiesFormatXML(virCapsPtr caps)
         virBufferAdjustIndent(&buf, -2);
         virBufferAddLit(&buf, "</migration_features>\n");
     }
+
+    if (caps->host.ncachebank &&
+            virCapabilitiesFormatCache(&buf, caps->host.ncachebank,
+                                       caps->host.cachebank) < 0)
+        return NULL;
 
     if (caps->host.netprefix)
         virBufferAsprintf(&buf, "<netprefix>%s</netprefix>\n",

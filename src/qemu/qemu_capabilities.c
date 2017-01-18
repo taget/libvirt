@@ -45,6 +45,7 @@
 #include "qemu_domain.h"
 #define __QEMU_CAPSRIV_H_ALLOW__
 #include "qemu_capspriv.h"
+#include "virresctrl.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -1093,7 +1094,45 @@ virQEMUCapsInitCPU(virCapsPtr caps,
     goto cleanup;
 }
 
+static int
+virQEMUCapsInitCache(virCapsPtr caps)
+{
+    int i, j;
+    unsigned bk_id = 0;
+    virResCtrlPtr resctrl;
+    virCapsHostCacheBankPtr bank;
 
+    for (i = 0; i < RDT_NUM_RESOURCES; i ++)
+    {
+        resctrl = virResCtrlGet(i);
+        if(resctrl->enabled) {
+            for( j = 0; j < resctrl->num_sockets; j++)
+            {
+                if(VIR_RESIZE_N(caps->host.cachebank, caps->host.ncachebank_max,
+                                caps->host.ncachebank, 1) < 0)
+                    return -1;
+
+                if(VIR_ALLOC(bank) < 0)
+                    return -1;
+
+                bank->id = bk_id;
+                if(VIR_STRDUP(bank->type, resctrl->cache_level) < 0)
+                    goto err;
+                if(VIR_STRDUP(bank->scope, resctrl->name) < 0)
+                    goto err;
+                if(VIR_STRDUP(bank->cpus, virBitmapFormat(resctrl->cpu_mask[j])) < 0)
+                    goto err;
+                bank->size = resctrl->cache_size[j];
+                bank->min = resctrl->cache_min[j];
+                caps->host.cachebank[caps->host.ncachebank++] = bank;
+            }
+        }
+    }
+    return 0;
+err:
+    VIR_FREE(bank);
+    return -1;
+}
 static int
 virQEMUCapsInitPages(virCapsPtr caps)
 {
@@ -1138,6 +1177,9 @@ virCapsPtr virQEMUCapsInit(virQEMUCapsCachePtr cache)
 
     if (virQEMUCapsInitCPU(caps, hostarch) < 0)
         VIR_WARN("Failed to get host CPU");
+
+    if (virQEMUCapsInitCache(caps) < 0)
+        VIR_WARN("Failed to get host cache");
 
     /* Add the power management features of the host */
     if (virNodeSuspendGetTargetMask(&caps->host.powerMgmt) < 0)
