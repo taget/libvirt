@@ -1100,6 +1100,11 @@ virQEMUCapsInitCPU(virCapsPtr caps,
     goto cleanup;
 }
 
+static int
+virQEMUCapsInitCache(virCapsPtr caps)
+{
+    return virCapsInitCache(caps);
+}
 
 static int
 virQEMUCapsInitPages(virCapsPtr caps)
@@ -1145,6 +1150,9 @@ virCapsPtr virQEMUCapsInit(virQEMUCapsCachePtr cache)
 
     if (virQEMUCapsInitCPU(caps, hostarch) < 0)
         VIR_WARN("Failed to get host CPU");
+
+    if (virQEMUCapsInitCache(caps) < 0)
+        VIR_WARN("Failed to get host cache");
 
     /* Add the power management features of the host */
     if (virNodeSuspendGetTargetMask(&caps->host.powerMgmt) < 0)

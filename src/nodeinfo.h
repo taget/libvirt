@@ -28,5 +28,6 @@
 
 int nodeGetInfo(virNodeInfoPtr nodeinfo);
 int nodeCapsInitNUMA(virCapsPtr caps);
+int virCapsInitCache(virCapsPtr caps);
 
 #endif /* __VIR_NODEINFO_H__*/

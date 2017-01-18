@@ -48,6 +48,7 @@
 #include "virstring.h"
 #include "virnuma.h"
 #include "virlog.h"
+#include "virresctrl.h"
 
 #define VIR_FROM_THIS VIR_FROM_NONE
 
@@ -415,4 +416,67 @@ nodeCapsInitNUMA(virCapsPtr caps)
     VIR_FREE(siblings);
     VIR_FREE(pageinfo);
     return ret;
+}
+
+int
+virCapsInitCache(virCapsPtr caps)
+{
+    size_t i, j;
+    virResCtrlPtr resctrl;
+    virCapsHostCacheBankPtr bank;
+
+    for (i = 0; i < VIR_RDT_RESOURCE_LAST; i++) {
+        /* L3DATA and L3CODE share L3 resources */
+        if (i == VIR_RDT_RESOURCE_L3CODE)
+            continue;
+
+        resctrl = virResCtrlGet(i);
+
+        if (resctrl->enabled) {
+            for (j = 0; j < resctrl->num_banks; j++) {
+                if (VIR_RESIZE_N(caps->host.cachebank, caps->host.ncachebank_max,
+                                caps->host.ncachebank, 1) < 0)
+                    return -1;
+
+                if (VIR_ALLOC(bank) < 0)
+                    return -1;
+
+                bank->id = resctrl->cache_banks[j].host_id;
+                if (VIR_STRDUP(bank->type, resctrl->cache_level) < 0)
+                    goto err;
+                if (VIR_STRDUP(bank->cpus, virBitmapFormat(resctrl->cache_banks[j].cpu_mask)) < 0)
+                    goto err;
+                bank->size = resctrl->cache_banks[j].cache_size;
+                /*L3DATA and L3CODE shares L3 cache resources, so fill them to the control element*/
+                if (i == VIR_RDT_RESOURCE_L3DATA) {
+                    if (VIR_EXPAND_N(bank->control, bank->ncontrol, 2) < 0)
+                        goto err;
+
+                    bank->control[0].min = virResCtrlGet(VIR_RDT_RESOURCE_L3DATA)->cache_banks[j].cache_min;
+                    bank->control[0].reserved = bank->control[0].min * (virResCtrlGet(VIR_RDT_RESOURCE_L3DATA)->min_cbm_bits);
+                    if (VIR_STRDUP(bank->control[0].scope,
+                                  virResCtrlGet(VIR_RDT_RESOURCE_L3DATA)->name) < 0)
+                        goto err;
+
+                    bank->control[1].min = virResCtrlGet(VIR_RDT_RESOURCE_L3CODE)->cache_banks[j].cache_min;
+                    bank->control[1].reserved = bank->control[1].min * (virResCtrlGet(VIR_RDT_RESOURCE_L3CODE)->min_cbm_bits);
+                    if (VIR_STRDUP(bank->control[1].scope,
+                                   virResCtrlGet(VIR_RDT_RESOURCE_L3CODE)->name) < 0)
+                        goto err;
+                } else {
+                    if (VIR_EXPAND_N(bank->control, bank->ncontrol, 1) < 0)
+                        goto err;
+                    bank->control[0].min = resctrl->cache_banks[j].cache_min;
+                    bank->control[0].reserved = bank->control[0].min * resctrl->min_cbm_bits;
+                    if (VIR_STRDUP(bank->control[0].scope, resctrl->name) < 0)
+                        goto err;
+                }
+                caps->host.cachebank[caps->host.ncachebank++] = bank;
+            }
+        }
+    }
+    return 0;
+ err:
+    VIR_FREE(bank);
+    return -1;
 }

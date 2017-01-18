@@ -105,6 +105,7 @@
 #include "vircgroup.h"
 #include "virperf.h"
 #include "virnuma.h"
+#include "virresctrl.h"
 #include "dirname.h"
 #include "network/bridge_driver.h"
 
@@ -848,6 +849,9 @@ qemuStateInitialize(bool privileged,
         run_uid = cfg->user;
         run_gid = cfg->group;
     }
+
+    if (virResCtrlAvailable() && virResCtrlInit() < 0)
+        VIR_WARN("Faild to initialize resource control.");
 
     qemu_driver->qemuCapsCache = virQEMUCapsCacheNew(cfg->libDir,
                                                      cfg->cacheDir,

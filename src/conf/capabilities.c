@@ -198,6 +198,18 @@ virCapabilitiesClearSecModel(virCapsHostSecModelPtr secmodel)
 }
 
 static void
+virCapabilitiesClearCacheBank(virCapsHostCacheBankPtr cachebank)
+{
+    size_t i;
+    for (i = 0; i < cachebank->ncontrol; i++)
+        VIR_FREE(cachebank->control[i].scope);
+
+    VIR_FREE(cachebank->type);
+    VIR_FREE(cachebank->cpus);
+}
+
+
+static void
 virCapabilitiesDispose(void *object)
 {
     virCapsPtr caps = object;
@@ -220,6 +232,10 @@ virCapabilitiesDispose(void *object)
     for (i = 0; i < caps->host.nsecModels; i++)
         virCapabilitiesClearSecModel(&caps->host.secModels[i]);
     VIR_FREE(caps->host.secModels);
+
+    for (i = 0; i < caps->host.ncachebank; i++)
+        virCapabilitiesClearCacheBank(caps->host.cachebank[i]);
+    VIR_FREE(caps->host.cachebank);
 
     VIR_FREE(caps->host.netprefix);
     VIR_FREE(caps->host.pagesSize);
@@ -844,6 +860,41 @@ virCapabilitiesFormatNUMATopology(virBufferPtr buf,
     return 0;
 }
 
+static int
+virCapabilitiesFormatCache(virBufferPtr buf,
+                           size_t ncachebank,
+                           virCapsHostCacheBankPtr *cachebank)
+{
+    size_t i;
+    size_t j;
+
+    virBufferAddLit(buf, "<cache>\n");
+    virBufferAdjustIndent(buf, 2);
+
+    for (i = 0; i < ncachebank; i++) {
+        virBufferAsprintf(buf,
+                          "<bank id='%u' type='%s' size='%llu' unit='KiB' cpus='%s'>\n",
+                          cachebank[i]->id,
+                          cachebank[i]->type,
+                          cachebank[i]->size,
+                          cachebank[i]->cpus);
+
+        virBufferAdjustIndent(buf, 2);
+        for (j = 0; j < cachebank[i]->ncontrol; j++) {
+            virBufferAsprintf(buf,
+                              "<control min='%llu' reserved='%llu' unit='KiB' scope='%s'/>\n",
+                              cachebank[i]->control[j].min,
+                              cachebank[i]->control[j].reserved,
+                              cachebank[i]->control[j].scope);
+        }
+        virBufferAdjustIndent(buf, -2);
+        virBufferAddLit(buf, "</bank>\n");
+    }
+    virBufferAdjustIndent(buf, -2);
+    virBufferAddLit(buf, "</cache>\n");
+    return 0;
+}
+
 /**
  * virCapabilitiesFormatXML:
  * @caps: capabilities to format
@@ -930,6 +981,11 @@ virCapabilitiesFormatXML(virCapsPtr caps)
         virBufferAdjustIndent(&buf, -2);
         virBufferAddLit(&buf, "</migration_features>\n");
     }
+
+    if (caps->host.ncachebank &&
+            virCapabilitiesFormatCache(&buf, caps->host.ncachebank,
+                                       caps->host.cachebank) < 0)
+        return NULL;
 
     if (caps->host.netprefix)
         virBufferAsprintf(&buf, "<netprefix>%s</netprefix>\n",

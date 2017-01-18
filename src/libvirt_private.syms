@@ -1125,6 +1125,7 @@ virLogManagerNew;
 # nodeinfo.h
 nodeCapsInitNUMA;
 nodeGetInfo;
+virCapsInitCache;
 virHostCPUGetCount;
 virHostCPUGetKVMMaxVCPUs;
 virHostCPUGetMap;
@@ -2322,7 +2323,9 @@ virRandomInt;
 
 # util/virresctrl.h
 virResCtrlAvailable;
+virResCtrlGet;
 virResCtrlInit;
+
 
 # util/virrotatingfile.h
 virRotatingFileReaderConsume;
