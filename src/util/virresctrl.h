@@ -25,6 +25,7 @@
 # define __VIR_RESCTRL_H__
 
 # include "virbitmap.h"
+# include "virutil.h"
 
 enum {
     VIR_RDT_RESOURCE_L3,
@@ -32,9 +33,10 @@ enum {
     VIR_RDT_RESOURCE_L3CODE,
     VIR_RDT_RESOURCE_L2,
     /* Must be the last */
-    VIR_RDT_RESOURCE_LAST,
+    VIR_RDT_RESOURCE_LAST
 };
 
+VIR_ENUM_DECL(virResCtrl);
 
 typedef struct _virResCacheBank virResCacheBank;
 typedef virResCacheBank *virResCacheBankPtr;

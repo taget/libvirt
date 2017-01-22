@@ -32,15 +32,34 @@
 VIR_LOG_INIT("util.resctrl");
 
 #define VIR_FROM_THIS VIR_FROM_RESCTRL
-
-#define RESCTRL_DIR "/sys/fs/resctrl"
-#define RESCTRL_INFO_DIR "/sys/fs/resctrl/info"
-#define SYSFS_SYSTEM_PATH "/sys/devices/system"
-
 #define MAX_CPU_SOCKET_NUM 8
 #define MAX_CBM_BIT_LEN 32
 #define MAX_SCHEMATA_LEN 1024
 #define MAX_FILE_LEN (10 * 1024 * 1024)
+#define RESCTRL_DIR "/sys/fs/resctrl"
+#define RESCTRL_INFO_DIR "/sys/fs/resctrl/info"
+#define SYSFS_SYSTEM_PATH "/sys/devices/system"
+
+VIR_ENUM_IMPL(virResCtrl, VIR_RDT_RESOURCE_LAST,
+              "l3", "l3data", "l3code", "l2");
+
+#define CONSTRUCT_RESCTRL_PATH(domain_name, item_name) \
+do { \
+    if (NULL == domain_name) { \
+        if (virAsprintf(&path, "%s/%s", RESCTRL_DIR, item_name) < 0)\
+            return -1; \
+    } else { \
+        if (virAsprintf(&path, "%s/%s/%s", RESCTRL_DIR, \
+                                        domain_name, \
+                                        item_name) < 0) \
+            return -1;  \
+    } \
+} while (0)
+
+#define VIR_RESCTRL_ENABLED(type) \
+    resctrlall[type].enabled
+
+#define VIR_RESCTRL_GET_SCHEMATA(count) ((1 << count) - 1)
 
 static unsigned int host_id;
 
