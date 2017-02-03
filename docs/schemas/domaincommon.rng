@@ -5528,7 +5528,7 @@
   </define>
   <define name="cachetype">
     <data type="string">
-      <param name="pattern">(l3)</param>
+      <param name="pattern">(l3|l3code|l3data)</param>
     </data>
   </define>
   <define name="cacheunit">
