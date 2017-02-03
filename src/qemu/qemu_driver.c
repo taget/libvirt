@@ -850,8 +850,10 @@ qemuStateInitialize(bool privileged,
         run_gid = cfg->group;
     }
 
-    if (virResCtrlAvailable() && virResCtrlInit() < 0)
-        VIR_WARN("Faild to initialize resource control.");
+    if (virResCtrlAvailable() && virResCtrlInit() < 0) {
+        VIR_ERROR(_("Faild to initialize resource control"));
+        goto error;
+    }
 
     qemu_driver->qemuCapsCache = virQEMUCapsCacheNew(cfg->libDir,
                                                      cfg->cacheDir,
