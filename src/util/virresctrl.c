@@ -34,7 +34,6 @@
 VIR_LOG_INIT("util.resctrl");
 
 #define VIR_FROM_THIS VIR_FROM_RESCTRL
-#define MAX_CPU_SOCKET_NUM 8
 #define MAX_CBM_BIT_LEN 32
 #define MAX_SCHEMATA_LEN 1024
 #define MAX_FILE_LEN (10 * 1024 * 1024)

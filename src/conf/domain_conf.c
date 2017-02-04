@@ -15760,8 +15760,12 @@ virDomainCacheTuneDefParseXML(virDomainDefPtr def,
     int type = -1;
     virDomainCacheBankPtr bank = NULL;
     virResCtrlPtr resctrl;
+    /* An array to make sure l3code and l3data are pairs */
+    int* sem = NULL;
 
     if (VIR_ALLOC_N(bank, n) < 0)
+        goto cleanup;
+    if (VIR_ALLOC_N(sem, MAX_CPU_SOCKET_NUM) < 0)
         goto cleanup;
 
     for (i = 0; i < n; i++) {
@@ -15809,6 +15813,12 @@ virDomainCacheTuneDefParseXML(virDomainDefPtr def,
                     _("'unsupported cache type '%s'"), tmp);
             goto cleanup;
         }
+
+        /* VIR_RDT_RESOURCE_L3DATA and VIR_RDT_RESOURCE_L3CODE should be pair */
+        if (type == VIR_RDT_RESOURCE_L3DATA)
+            sem[bank[i].host_id] ++;
+        else if (type == VIR_RDT_RESOURCE_L3CODE)
+            sem[bank[i].host_id] --;
 
         resctrl = virResCtrlGet(type);
 
@@ -15858,6 +15868,14 @@ virDomainCacheTuneDefParseXML(virDomainDefPtr def,
         }
     }
 
+    for (i = 0; i < MAX_CPU_SOCKET_NUM; i ++) {
+        if (sem[i] != 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                    _("'l3code and l3data shoud be show up pairs on bank %zu'"),
+                    i);
+            goto cleanup;
+        }
+    }
     def->cachetune.cache_banks = bank;
     def->cachetune.n_banks = n;
     return 0;
@@ -15865,6 +15883,7 @@ virDomainCacheTuneDefParseXML(virDomainDefPtr def,
  cleanup:
     VIR_FREE(bank);
     VIR_FREE(tmp);
+    VIR_FREE(sem);
     return -1;
 }
 

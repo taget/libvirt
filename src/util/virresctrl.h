@@ -28,6 +28,8 @@
 # include "virutil.h"
 # include "conf/domain_conf.h"
 
+#define MAX_CPU_SOCKET_NUM 8
+
 enum {
     VIR_RDT_RESOURCE_L3,
     VIR_RDT_RESOURCE_L3DATA,
