@@ -15823,9 +15823,20 @@ virDomainCacheTuneDefParseXML(virDomainDefPtr def,
         resctrl = virResCtrlGet(type);
 
         if (resctrl == NULL || !resctrl->enabled) {
-            virReportError(VIR_ERR_XML_ERROR,
+            /* support cdp compatible */
+            if (type == VIR_RDT_RESOURCE_L3) {
+                resctrl = virResCtrlGet(type + 1);
+                if (resctrl == NULL || !resctrl->enabled) {
+                    virReportError(VIR_ERR_XML_ERROR,
                     _("'host doesn't enabled cache type '%s'"), tmp);
-            goto cleanup;
+                    goto cleanup;
+                }
+                VIR_WARN("Use cdp compatible mode.");
+            } else {
+                virReportError(VIR_ERR_XML_ERROR,
+                        _("'host doesn't enabled cache type '%s'"), tmp);
+                goto cleanup;
+            }
         }
 
         bool found_host_id = false;

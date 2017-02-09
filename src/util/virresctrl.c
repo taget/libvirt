@@ -760,6 +760,7 @@ int virResCtrlSetCacheBanks(virDomainCachetunePtr cachetune,
     char name[VIR_UUID_STRING_BUFLEN];
     virResDomainPtr p;
     int type;
+    int pair_type = -1;
     int sid;
     int schemata;
 
@@ -793,6 +794,13 @@ int virResCtrlSetCacheBanks(virDomainCachetunePtr cachetune,
                          cachetune->cache_banks[i].type);
                 continue;
             }
+            /* use cdp compatible mode */
+            if (!VIR_RESCTRL_ENABLED(type) &&
+                    (type == VIR_RDT_RESOURCE_L3) &&
+                    VIR_RESCTRL_ENABLED(VIR_RDT_RESOURCE_L3DATA)) {
+                type = VIR_RDT_RESOURCE_L3DATA;
+                pair_type = VIR_RDT_RESOURCE_L3CODE;
+            }
 
             if ((sid = virResCtrlGetSocketIdByHostID(
                             type, cachetune->cache_banks[i].host_id)) < 0) {
@@ -810,6 +818,8 @@ int virResCtrlSetCacheBanks(virDomainCachetunePtr cachetune,
             }
 
             p->schematas[type]->schemata_items[sid].schemata = schemata;
+            if (pair_type > 0)
+                p->schematas[pair_type]->schemata_items[sid].schemata = schemata;
         }
 
         for (i = 0; i < npid; i++)
