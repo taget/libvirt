@@ -27,6 +27,7 @@
 # include "virbitmap.h"
 # include "virutil.h"
 # include "conf/domain_conf.h"
+# include "virthread.h"
 
 #define MAX_CPU_SOCKET_NUM 8
 
@@ -49,6 +50,8 @@ struct _virResCacheBank {
     unsigned long long cache_left;
     unsigned long long cache_min;
     virBitmapPtr cpu_mask;
+
+    virMutex lock;
 };
 
 /**
