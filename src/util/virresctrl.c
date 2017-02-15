@@ -711,6 +711,42 @@ virResCtrlAppendDomain(virResDomainPtr dom)
     return 0;
 }
 
+/* scan /sys/fs/resctrl again and refresh default schemata */
+static
+int virResCtrlScan(void)
+{
+    struct dirent *ent;
+    DIR *dp = NULL;
+    int direrr;
+    virResDomainPtr p;
+    int rc = -1;
+
+    if (virDirOpenQuiet(&dp, RESCTRL_DIR) < 0) {
+        if (errno == ENOENT)
+            return -1;
+        VIR_ERROR(_("Unable to open %s (%d)"), RESCTRL_DIR, errno);
+        goto cleanup;
+    }
+
+    while ((direrr = virDirRead(dp, &ent, NULL)) > 0) {
+        if ((ent->d_type != DT_DIR) || STREQ(ent->d_name, "info"))
+            continue;
+        /* test if we'v tracked all domains */
+        p = virResCtrlGetDomain(ent->d_name);
+        if (p == NULL) {
+            p = virResCtrlLoadDomain(ent->d_name);
+            if (p == NULL)
+                continue;
+            virResCtrlAppendDomain(p);
+        }
+    }
+    rc = 0;
+
+ cleanup:
+    VIR_DIR_CLOSE(dp);
+    return rc;
+}
+
 static int
 virResCtrlGetSocketIdByHostID(int type, unsigned int hostid)
 {
@@ -817,6 +853,10 @@ int virResCtrlSetCacheBanks(virDomainCachetunePtr cachetune,
         goto cleanup;
     }
 
+    if (virResCtrlScan() < 0) {
+        VIR_ERROR(_("Failed to scan resctrl domain dir"));
+        goto cleanup;
+    }
     p = virResCtrlGetDomain(name);
     if (p == NULL) {
         VIR_DEBUG("no domain name %s found, create new one!", name);
