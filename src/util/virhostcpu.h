@@ -27,6 +27,7 @@
 # include "internal.h"
 # include "virarch.h"
 # include "virbitmap.h"
+# include "virresctrl.h"
 
 
 int virHostCPUGetStats(int cpuNum,
@@ -62,6 +63,8 @@ int virHostCPUGetSocket(unsigned int cpu, unsigned int *socket);
 int virHostCPUGetCore(unsigned int cpu, unsigned int *core);
 
 virBitmapPtr virHostCPUGetSiblingsList(unsigned int cpu);
+virResCacheBankPtr virHostCPUGetCacheBanks(const int type, const int cbm_len,
+                                           size_t *nbanks);
 # endif
 
 int virHostCPUGetOnline(unsigned int cpu, bool *online);

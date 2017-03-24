@@ -223,6 +223,62 @@ virHostCPUCountThreadSiblings(unsigned int cpu)
     return ret;
 }
 
+/* Return specific type cache size in KiB of given cpu
+   - 1 on error happened */
+static
+int virHostCPUGetCache(unsigned int cpu, unsigned int type)
+{
+    char *path = NULL;
+    char *val = NULL;
+    char *tmp = NULL;
+    char *unit = NULL;
+    int value = -1;
+    unsigned long long size;
+
+
+    if (virAsprintf(&path, "/cache/index%u/size", type) < 0)
+        return -1;
+
+    if (virSysfsGetCpuValueString(cpu, path, &val))
+        goto error;
+
+    if ((tmp = strchr(val, '\n'))) *tmp = '\0';
+
+    if (virStrToLong_i(val, &unit, 10, &value) < 0)
+        goto error;
+
+    size = value;
+    if (virScaleInteger(&size, unit, 1, ULLONG_MAX) < 0)
+        goto error;
+
+    return size / 1024;
+
+ error:
+    VIR_FREE(path);
+    VIR_FREE(val);
+    VIR_FREE(unit);
+    return -1;
+}
+
+static
+int
+virHostCPUGetCacheId(unsigned int cpu, unsigned int type, unsigned int *cache_id)
+{
+    unsigned int tmp;
+    int ret;
+    char* path;
+    if (virAsprintf(&path, "/cache/index%u/id", type) < 0)
+        return -1;
+
+    ret = virSysfsGetCpuValueUint(cpu,
+                                  path,
+                                  &tmp);
+
+    *cache_id = tmp;
+
+    VIR_FREE(path);
+    return ret;
+}
 int
 virHostCPUGetSocket(unsigned int cpu, unsigned int *socket)
 {
@@ -1194,3 +1250,77 @@ virHostCPUGetKVMMaxVCPUs(void)
     return -1;
 }
 #endif /* HAVE_LINUX_KVM_H */
+/*
+   Fill all cache bank informations of the host.
+
+   Return a list of virResCacheBankPtr, and fill cache bank information
+   by loop for all cpus on host, number of cache bank will be set in nbanks
+   NULL if error happened, and nbanks will be set 0.
+*/
+virResCacheBankPtr virHostCPUGetCacheBanks(const int type, const int cbm_len,
+                                           size_t *nbanks)
+{
+    int npresent_cpus;
+    int idx;
+    size_t i;
+    virResCacheBankPtr bank;
+    *nbanks = 0;
+
+    if ((npresent_cpus = virHostCPUGetCount()) < 0)
+        return NULL;
+
+    switch (type) {
+        case VIR_RDT_RESOURCE_L3:
+        case VIR_RDT_RESOURCE_L3DATA:
+        case VIR_RDT_RESOURCE_L3CODE:
+            idx = 3;
+            break;
+        case VIR_RDT_RESOURCE_L2:
+            idx = 2;
+            break;
+        default:
+            idx = -1;
+    }
+
+    if (idx == -1)
+        return NULL;
+
+    if (VIR_ALLOC_N(bank, 1) < 0)
+        return NULL;
+
+    *nbanks = 1;
+    for (i = 0; i < npresent_cpus; i ++) {
+        unsigned int cache_id;
+        int cache_size;
+        if (virHostCPUGetCacheId(i, idx, &cache_id) < 0)
+            goto error;
+        /* Expand cache bank array */
+        if (cache_id > (*nbanks - 1)) {
+            size_t cur = *nbanks;
+            size_t exp = cache_id - (*nbanks) + 1;
+            if (VIR_EXPAND_N(bank, cur, exp) < 0)
+                goto error;
+            *nbanks = cache_id + 1;
+        }
+        if (bank[cache_id].cpu_mask == NULL) {
+            if (!(bank[cache_id].cpu_mask = virBitmapNew(npresent_cpus)))
+                goto error;
+        }
+
+        ignore_value(virBitmapSetBit(bank[cache_id].cpu_mask, i));
+
+        if (bank[cache_id].cache_size == 0) {
+            if ((cache_size = virHostCPUGetCache(i, idx)) < 0)
+                goto error;
+
+            bank[cache_id].cache_size = cache_size;
+            bank[cache_id].cache_min = cache_size / cbm_len;
+        }
+    }
+    return bank;
+
+ error:
+    *nbanks = 0;
+    VIR_FREE(bank);
+    return NULL;
+}
