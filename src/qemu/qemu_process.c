@@ -70,6 +70,7 @@
 #include "virbitmap.h"
 #include "viratomic.h"
 #include "virnuma.h"
+#include "virresctrl.h"
 #include "virstring.h"
 #include "virhostdev.h"
 #include "secret_util.h"
@@ -5088,6 +5089,51 @@ qemuProcessSetupVcpus(virDomainObjPtr vm)
     return 0;
 }
 
+static int
+qemuProcessSetCacheBanks(virCapsHostPtr caps, virDomainObjPtr vm)
+{
+    size_t i, j;
+    virDomainCachetunePtr cachetune;
+    unsigned int max_vcpus = virDomainDefGetVcpusMax(vm->def);
+    pid_t *pids = NULL;
+    virDomainVcpuDefPtr vcpu;
+    size_t npid = 0;
+    size_t count = 0;
+    int ret = -1;
+
+    cachetune = &(vm->def->cachetune);
+
+    for (i = 0; i < cachetune->n_banks; i++) {
+        if (cachetune->cache_banks[i].vcpus) {
+            for (j = 0; j < max_vcpus; j++) {
+                if (virBitmapIsBitSet(cachetune->cache_banks[i].vcpus, j)) {
+
+                    vcpu = virDomainDefGetVcpu(vm->def, j);
+                    if (!vcpu->online)
+                        continue;
+
+                    if (VIR_RESIZE_N(pids, npid, count, 1) < 0)
+                        goto cleanup;
+                    pids[count ++] = qemuDomainGetVcpuPid(vm, j);
+                }
+            }
+        }
+    }
+
+    /* If not specify vcpus in cachetune, add vm->pid */
+    if (pids == NULL) {
+        if (VIR_ALLOC_N(pids, 1) < 0)
+            goto cleanup;
+        pids[0] = vm->pid;
+        count = 1;
+    }
+    ret = virResctrlSetCachetunes(caps, cachetune, vm->def->uuid, pids, count);
+
+ cleanup:
+    VIR_FREE(pids);
+    return ret;
+}
+
 
 int
 qemuProcessSetupIOThread(virDomainObjPtr vm,
@@ -5914,6 +5960,11 @@ qemuProcessLaunch(virConnectPtr conn,
         qemuProcessAutoDestroyAdd(driver, vm, conn) < 0)
         goto cleanup;
 
+    VIR_WARN("Cache allocation");
+    if (qemuProcessSetCacheBanks(&(driver->caps->host),
+                                 vm) < 0)
+        goto cleanup;
+
     ret = 0;
 
  cleanup:
@@ -6418,6 +6469,9 @@ void qemuProcessStop(virQEMUDriverPtr driver,
 
     virPerfFree(priv->perf);
     priv->perf = NULL;
+
+    if (&(vm->def->cachetune) != NULL)
+        virResctrlRemoveCachetunes(vm->def->uuid);
 
     qemuProcessRemoveDomainStatus(driver, vm);
 
