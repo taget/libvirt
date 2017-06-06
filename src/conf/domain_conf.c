@@ -16250,6 +16250,104 @@ virDomainVcpuPinDefParseXML(virDomainDefPtr def,
     return ret;
 }
 
+/* Parse the XML definition for cachetune
+ * and a cachetune has the form
+ * <cachetune id='0' cache_id='0' level='3' type='both' size='1024' unit='KiB'/>
+ */
+static int
+virDomainCacheTuneDefParseXML(virDomainDefPtr def,
+                              int n,
+                              xmlNodePtr* nodes)
+{
+    char* tmp = NULL;
+    size_t i;
+    int type = -1;
+    virDomainCacheBankPtr bank = NULL;
+
+    if (VIR_ALLOC_N(bank, n) < 0)
+        goto cleanup;
+
+    for (i = 0; i < n; i++) {
+        if (!(tmp = virXMLPropString(nodes[i], "id"))) {
+            virReportError(VIR_ERR_XML_ERROR, "%s", _("missing id in cache tune"));
+            goto cleanup;
+        }
+        if (virStrToLong_uip(tmp, NULL, 10, &(bank[i].id)) < 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                           _("invalid setting for cache id '%s'"), tmp);
+            goto cleanup;
+        }
+        VIR_FREE(tmp);
+
+        if (!(tmp = virXMLPropString(nodes[i], "cache_id"))) {
+            virReportError(VIR_ERR_XML_ERROR, "%s", _("missing cache id in cache tune"));
+            goto cleanup;
+        }
+        if (virStrToLong_uip(tmp, NULL, 10, &(bank[i].cache_id)) < 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                           _("invalid setting for cache host id '%s'"), tmp);
+            goto cleanup;
+        }
+        VIR_FREE(tmp);
+
+        if (!(tmp = virXMLPropString(nodes[i], "level"))) {
+            virReportError(VIR_ERR_XML_ERROR, "%s", _("missing cache level in cache tune"));
+            goto cleanup;
+        }
+        if (virStrToLong_uip(tmp, NULL, 10, &(bank[i].level)) < 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                           _("invalid setting for cache level '%s'"), tmp);
+            goto cleanup;
+        }
+        VIR_FREE(tmp);
+
+
+        if (!(tmp = virXMLPropString(nodes[i], "size"))) {
+            virReportError(VIR_ERR_XML_ERROR, "%s", _("missing size in cache tune"));
+            goto cleanup;
+        }
+        if (virStrToLong_ull(tmp, NULL, 10, &(bank[i].size)) < 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                           _("invalid setting for cache size '%s'"), tmp);
+            goto cleanup;
+        }
+        /* convert to B */
+        bank[i].size *= 1024;
+        VIR_FREE(tmp);
+
+        if (!(tmp = virXMLPropString(nodes[i], "type"))) {
+            virReportError(VIR_ERR_INTERNAL_ERROR, "%s",
+                           _("missing cache type"));
+            goto cleanup;
+        }
+        if ((type = virCacheTypeFromString(tmp)) < 0) {
+            virReportError(VIR_ERR_XML_ERROR,
+                    _("'unsupported cache type '%s'"), tmp);
+            goto cleanup;
+        }
+
+        if ((tmp = virXMLPropString(nodes[i], "vcpus"))) {
+            if (virBitmapParse(tmp, &bank[i].vcpus,
+                        VIR_DOMAIN_CPUMASK_LEN) < 0)
+                goto cleanup;
+
+            if (virBitmapIsAllClear(bank[i].vcpus)) {
+                virReportError(VIR_ERR_CONFIG_UNSUPPORTED,
+                        _("Invalid value of 'vcpus': %s"), tmp);
+                goto cleanup;
+            }
+        }
+    }
+
+    def->cachetune.cache_banks = bank;
+    def->cachetune.n_banks = n;
+    return 0;
+
+ cleanup:
+    VIR_FREE(bank);
+    VIR_FREE(tmp);
+    return -1;
+}
 
 /* Parse the XML definition for a iothreadpin
  * and an iothreadspin has the form
@@ -17536,6 +17634,14 @@ virDomainDefParseXML(xmlDocPtr xml,
         if (virDomainVcpuPinDefParseXML(def, nodes[i]))
             goto error;
     }
+    VIR_FREE(nodes);
+
+    if ((n = virXPathNodeSet("./cputune/cachetune", ctxt, &nodes)) < 0)
+        goto error;
+
+    if (virDomainCacheTuneDefParseXML(def, n, nodes) < 0)
+        goto error;
+
     VIR_FREE(nodes);
 
     if ((n = virXPathNodeSet("./cputune/emulatorpin", ctxt, &nodes)) < 0) {
@@ -24328,6 +24434,29 @@ virDomainSchedulerFormat(virBufferPtr buf,
 }
 
 
+static void
+virDomainCacheTuneDefFormat(virBufferPtr buf,
+                            virDomainCachetunePtr cache)
+{
+    size_t i;
+    for (i = 0; i < cache->n_banks; i ++) {
+        virBufferAsprintf(buf, "<cachetune id='%u' cache_id='%u' "
+                               "level='%u' type='%s' size='%llu' unit='KiB'",
+                               cache->cache_banks[i].id,
+                               cache->cache_banks[i].cache_id,
+                               cache->cache_banks[i].level,
+                               virCacheTypeToString(cache->cache_banks[i].type),
+                               cache->cache_banks[i].size / 1024);
+
+        if (cache->cache_banks[i].vcpus)
+            virBufferAsprintf(buf, " vcpus='%s'/>\n",
+                    virBitmapFormat(cache->cache_banks[i].vcpus));
+        else
+            virBufferAddLit(buf, "/>\n");
+    }
+}
+
+
 static int
 virDomainCputuneDefFormat(virBufferPtr buf,
                           virDomainDefPtr def)
@@ -24373,6 +24502,8 @@ virDomainCputuneDefFormat(virBufferPtr buf,
         virBufferAsprintf(&childrenBuf, "<iothread_quota>%lld"
                           "</iothread_quota>\n",
                           def->cputune.iothread_quota);
+
+    virDomainCacheTuneDefFormat(&childrenBuf, &def->cachetune);
 
     for (i = 0; i < def->maxvcpus; i++) {
         char *cpumask;

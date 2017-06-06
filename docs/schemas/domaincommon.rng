@@ -834,6 +834,35 @@
             </attribute>
           </element>
         </zeroOrMore>
+        <zeroOrMore>
+          <element name="cachetune">
+            <attribute name="id">
+              <ref name="cachetuneid"/>
+            </attribute>
+            <attribute name="cache_id">
+              <ref name="cacheid"/>
+            </attribute>
+            <attribute name="level">
+              <ref name="cachelevel"/>
+            </attribute>
+            <attribute name="type">
+              <ref name="cachetype"/>
+            </attribute>
+            <attribute name="size">
+              <ref name="unsignedInt"/>
+            </attribute>
+            <optional>
+              <attribute name="unit">
+                <ref name="cacheunit"/>
+              </attribute>
+            </optional>
+            <optional>
+              <attribute name="vcpus">
+                <ref name="cpuset"/>
+              </attribute>
+            </optional>
+          </element>
+        </zeroOrMore>
         <optional>
           <element name="emulatorpin">
             <attribute name="cpuset">
@@ -5684,6 +5713,31 @@
   <define name="rebootTimeoutDelay">
     <data type="short">
       <param name="minInclusive">-1</param>
+    </data>
+  </define>
+  <define name="cachetuneid">
+    <data type="unsignedShort">
+      <param name="pattern">[0-9]+</param>
+    </data>
+  </define>
+  <define name="cacheid">
+    <data type="unsignedShort">
+      <param name="pattern">[0-9]+</param>
+    </data>
+  </define>
+  <define name="cachelevel">
+    <data type="unsignedShort">
+      <param name="pattern">(3)</param>
+    </data>
+  </define>
+  <define name="cachetype">
+    <data type="string">
+      <param name="pattern">(both|code|data)</param>
+    </data>
+  </define>
+  <define name="cacheunit">
+    <data type="string">
+      <param name="pattern">KiB</param>
     </data>
   </define>
   <!-- weight currently is in range [100, 1000] -->

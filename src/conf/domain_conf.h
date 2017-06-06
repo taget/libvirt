@@ -2190,6 +2190,25 @@ struct _virDomainMemtune {
     int allocation; /* enum virDomainMemoryAllocation */
 };
 
+typedef struct _virDomainCacheBank virDomainCacheBank;
+typedef virDomainCacheBank *virDomainCacheBankPtr;
+
+struct _virDomainCacheBank {
+    unsigned int id;
+    unsigned int cache_id; /* cache id to be allocated on */
+    unsigned int level; /* cache level */
+    int type; /* enum virCacheType */
+    unsigned long long size; /* in kibibytes */
+    virBitmapPtr vcpus;
+};
+
+typedef struct _virDomainCachetune virDomainCachetune;
+typedef virDomainCachetune *virDomainCachetunePtr;
+struct _virDomainCachetune {
+    size_t n_banks;
+    virDomainCacheBankPtr cache_banks;
+};
+
 typedef struct _virDomainPowerManagement virDomainPowerManagement;
 typedef virDomainPowerManagement *virDomainPowerManagementPtr;
 
@@ -2262,6 +2281,8 @@ struct _virDomainDef {
     virDomainIOThreadIDDefPtr *iothreadids;
 
     virDomainCputune cputune;
+
+    virDomainCachetune cachetune;
 
     virDomainNumaPtr numa;
     virDomainResourceDefPtr resource;
